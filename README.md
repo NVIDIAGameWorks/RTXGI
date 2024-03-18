@@ -38,7 +38,6 @@ GPU arch > 70. **|** [CMake v3.24.3][CMake] **|** [Git LFS][LFS] **|** [Vulkan S
 ### Further steps
 - [Quick start guide][QuickStart] for building and running the pathtracer example.
 - [NRC integration guide][NrcGuide] and the [SHARC integration guide][SharcGuide] respectively.
-- [Internal development guide][Development].
 
 ## Contact
 RTXGI SDK is actively being developed. Please report any issues directly through the GitHub issue tracker, and for any information or suggestions contact us at rtxgi-sdk-support@nvidia.com.

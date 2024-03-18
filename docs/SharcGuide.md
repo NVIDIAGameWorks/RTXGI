@@ -4,5 +4,5 @@ Spatially Hashed Radiance Cache is a technique aimed at improving signal quality
 ## Distribution
 SHARC is distributed as a set of shader-only sources; the package is located in [sdk-libraries/sharc][SharcPackage] and contains shader includes and [integration guide][SharcIntegrationGuide].
 
-[SharcPackage]: https://gitlab-master.nvidia.com/rtx/sharc
-[SharcIntegrationGuide]: https://gitlab-master.nvidia.com/rtx/sharc/-/blob/master/docs/Integration.md?ref_type=heads.
+[SharcPackage]: https://github.com/NVIDIAGameWorks/Spatial-Hash-Radiance-Cache/tree/main
+[SharcIntegrationGuide]: https://github.com/NVIDIAGameWorks/Spatial-Hash-Radiance-Cache/blob/main/docs/Integration.md
