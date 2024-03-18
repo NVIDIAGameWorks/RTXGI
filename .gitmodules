@@ -11,3 +11,6 @@
 [submodule "sdk-libraries/nrc"]
 	path = sdk-libraries/nrc
 	url = https://github.com/NVIDIAGameWorks/Neural-Radiance-Cache.git
+[submodule "media"]
+	path = media
+	url = https://github.com/NVIDIAGameWorks/RTXGI-Assets.git

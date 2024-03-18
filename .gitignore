@@ -1,0 +1,9 @@
+bin/
+build*/
+.vs
+.vscode
+*.sublime-project
+*.sublime-workspace
+nrd.cfg
+external/AgilitySDK/
+external/dxc/
