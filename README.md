@@ -33,7 +33,7 @@ RTXGI SDK provides an example integration (DX12 and Vulkan) of two state-of-the-
 ## Getting up and running
 
 ### Prerequisites
-GPU arch > 70. **|** [CMake v3.24.3][CMake] **|** [Git LFS][LFS] **|** [Vulkan SDK 1.3.268.0][VKSDK] **|** [VS 2022][VS22] **|** Windows SDK ≥ 10.0.20348.0
+Min 20xx - SHARC **|** Min 30xx - NRC **|** [CMake v3.24.3][CMake] **|** [Git LFS][LFS] **|** [Vulkan SDK 1.3.268.0][VKSDK] **|** [VS 2022][VS22] **|** Windows SDK ≥ 10.0.20348.0
 
 ### Further steps
 - [Quick start guide][QuickStart] for building and running the pathtracer example.
