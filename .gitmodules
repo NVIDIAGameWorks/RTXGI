@@ -1,3 +1,13 @@
 [submodule "donut"]
 	path = donut
 	url = https://github.com/NVIDIAGameWorks/donut.git
+	branch = main
+[submodule "external/RayTracingDenoiser"]
+	path = external/RayTracingDenoiser
+	url = https://github.com/NVIDIAGameWorks/RayTracingDenoiser.git
+[submodule "sdk-libraries/sharc"]
+	path = sdk-libraries/sharc
+	url = https://github.com/NVIDIAGameWorks/Spatial-Hash-Radiance-Cache.git
+[submodule "sdk-libraries/nrc"]
+	path = sdk-libraries/nrc
+	url = https://github.com/NVIDIAGameWorks/Neural-Radiance-Cache.git
