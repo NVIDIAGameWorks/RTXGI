@@ -45,6 +45,9 @@ RTXGI SDK is actively being developed. Please report any issues directly through
 ## License
 See [LICENSE.md](LICENSE.md)
 
+### RTXGI v1.x
+Please note that version v1.x of RTXGI which includes the DDGI algorithm is located in a separate repo at the following url: https://github.com/NVIDIAGameWorks/RTXGI-DDGI"
+
 
 [QuickStart]: docs/QuickStart.md
 [SharcGuide]: docs/SharcGuide.md
