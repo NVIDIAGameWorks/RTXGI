@@ -12,16 +12,16 @@
 
 namespace NrdConfig
 {
-    nrd::RelaxDiffuseSpecularSettings GetDefaultRELAXSettings()
+    nrd::RelaxSettings GetDefaultRELAXSettings()
     {
-        nrd::RelaxDiffuseSpecularSettings settings;
+        nrd::RelaxSettings settings;
         settings.enableAntiFirefly = true;
         settings.hitDistanceReconstructionMode = nrd::HitDistanceReconstructionMode::AREA_3X3;
 
         settings.historyFixFrameNum = 4;
         settings.spatialVarianceEstimationHistoryThreshold = 4;
 
-        settings.enableReprojectionTestSkippingWithoutMotion = false;
+        //settings.enableReprojectionTestSkippingWithoutMotion = false;
 
         // (pixels) - pre-accumulation spatial reuse pass blur radius (0 = disabled, must be used in case of probabilistic sampling) <- we're using probabilistic sampling
         settings.diffusePrepassBlurRadius = 0.0f;

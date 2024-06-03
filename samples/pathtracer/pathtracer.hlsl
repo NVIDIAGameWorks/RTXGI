@@ -96,7 +96,7 @@ RWStructuredBuffer<NrcPackedQueryPathInfo>      queryPathInfo                   
 RWStructuredBuffer<NrcPackedTrainingPathInfo>   trainingPathInfo                        : register(u1, space2); // Misc path info (vertexCount, queryIndex)
 RWStructuredBuffer<NrcPackedPathVertex>         trainingPathVertices                    : register(u2, space2); // Path vertex data used to train the neural radiance cache
 RWStructuredBuffer<NrcRadianceParams>           queryRadianceParams                     : register(u3, space2);
-RWByteAddressBuffer                             countersData                            : register(u4, space2);
+RWStructuredBuffer<uint>                        countersData                            : register(u4, space2);
 
 #if NRC_DEBUG_BUFFERS
 RWStructuredBuffer<NrcDebugTrainingPathInfo>    debugTrainingPathInfo                   : register(u5, space2);
@@ -114,8 +114,8 @@ RWStructuredBuffer<NrcDebugTrainingPathInfo>    debugTrainingPathInfo           
 #if SHARC_UPDATE || SHARC_QUERY
 RWStructuredBuffer<uint64_t>    u_SharcHashEntriesBuffer        : register(u0, space3);
 RWStructuredBuffer<uint>        u_HashCopyOffsetBuffer          : register(u1, space3);
-RWByteAddressBuffer             u_SharcVoxelDataBuffer          : register(u2, space3);
-RWByteAddressBuffer             u_SharcVoxelDataBufferPrev      : register(u3, space3);
+RWStructuredBuffer<uint4>       u_SharcVoxelDataBuffer          : register(u2, space3);
+RWStructuredBuffer<uint4>       u_SharcVoxelDataBufferPrev      : register(u3, space3);
 #endif // SHARC_UPDATE || SHARC_QUERY
 
 RayDesc GeneratePinholeCameraRay(float2 normalisedDeviceCoordinate)
@@ -521,9 +521,6 @@ void PathTraceRays()
     buffers.trainingPathVertices = trainingPathVertices;
     buffers.queryRadianceParams = queryRadianceParams;
     buffers.countersData = countersData;
-#if NRC_DEBUG_BUFFERS
-    buffers.debugTrainingPathInfo = debugTrainingPathInfo;
-#endif
 
     // Create NrcContext
     NrcContext nrcContext = NrcCreateContext(g_Lighting.nrcConstants, buffers, launchIndex);
@@ -705,7 +702,7 @@ void PathTraceRays()
                 isValidHit &= footrprint * lerp(1.0f, 1.5f, Rand(rngState)) > voxelSize;
 
                 float3 sharcRadiance;
-                if (isValidHit && SharcGetCachedRadiance(sharcState, sharcHitData, sharcRadiance))
+                if (isValidHit && SharcGetCachedRadiance(sharcState, sharcHitData, sharcRadiance, false))
                 {
                     sampleRadiance += sharcRadiance * throughput;
 
@@ -877,7 +874,7 @@ void PathTraceRays()
             }
 
             NrcSetBrdfPdf(nrcPathState, brdfPdf);
-            
+
             // Refraction requires the ray offset to go in the opposite direction
             bool transition = dot(geometryNormal, ray.Direction) <= 0.0f;
             ray.Origin = OffsetRay(hitPos, transition ? -geometryNormal : geometryNormal);

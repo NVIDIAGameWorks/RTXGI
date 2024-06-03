@@ -152,6 +152,12 @@ Below is another variant which shows how NRC is integrated if the primary ray is
 
 void RayGenFunc() 
 {
+    // Prepare launchIndex, launchDimensions
+    if (NrcIsUpdateMode())
+        launchIndex = (float2(DispatchRaysIndex().xy) + Rng::GetFloat2()) * nrcTrainingDownscaleFactor;
+    else
+        launchIndex = DispatchRaysIndex().xy;
+
     // Load data from G-Buffer...
 
     // Flag G-Buffer miss to write it to NRC later
@@ -171,8 +177,7 @@ void RayGenFunc()
 
         if (NrcIsUpdateMode()) {/*Add random offset to pixel's coords...*/}
         
-        if(flagGbufferMiss) 
-        {
+        if(flagGbufferMiss) {
             NrcUpdateOnMiss(nrcPathState);
             break;
         }
@@ -203,8 +208,7 @@ void RayGenFunc()
             // Account for emissives and evaluate NEE with RIS...
 
             // Terminate loop early on last bounce (don't sample BRDF)
-            if (bounce == gData.maxPathVertices - 1) 
-            {
+            if (bounce == gData.maxPathVertices - 1) {
                 NrcSetDebugPathTerminationReason(...); 
                 break;
             }
@@ -248,15 +252,16 @@ void CustomResolve(int3 DispatchThreadID : SV_DispatchThreadID)
 {
 	const uint2 launchIndex = DispatchThreadID.xy;
 	if(any(launchIndex >= screenResolution)) 
-	    return;
+		return;
 
     const uint sampleIndex = 0;
     const uint samplesPerPixel = 1;
 
     const uint pathIndex = NrcGetPathInfoIndex(screenResolution, launchIndex, sampleIndex, samplesPerPixel);
-    const NrcQueryPathInfo path = NrcUnpackQueryPathInfo(nrcQueryPathInfo[pathIndex]);
+    
+	const NrcQueryPathInfo path = NrcUnpackQueryPathInfo(nrcQueryPathInfo[pathIndex]);
 
-    if (path.queryBufferIndex < 0xFFFFFFFF)
+	if (path.queryBufferIndex < 0xFFFFFFFF)
     {
 		float3 radiance = NrcUnpackRadiance(nrcQueryRadiance[path.queryBufferIndex], radianceUnpackMultiplier) * path.prefixThroughput;
 		uint uBrdfType = brdfTypeTarget[launchIndex];
@@ -264,7 +269,7 @@ void CustomResolve(int3 DispatchThreadID : SV_DispatchThreadID)
 		if(uBrdfType == BRDF_SPECULAR)
 			specularPathTracingTarget[launchIndex] += float4(radiance, 0.0f);
 		if(uBrdfType == BRDF_DIFFUSE)
-            diffusePathTracingTarget[launchIndex] += float4(radiance, 0.0f);
+			diffusePathTracingTarget[launchIndex] += float4(radiance, 0.0f);
     }
 }
 ```

@@ -21,6 +21,6 @@ namespace NrdConfig
         MaxCount
     };
 
-    nrd::RelaxDiffuseSpecularSettings GetDefaultRELAXSettings();
+    nrd::RelaxSettings GetDefaultRELAXSettings();
     nrd::ReblurSettings GetDefaultREBLURSettings();
 }

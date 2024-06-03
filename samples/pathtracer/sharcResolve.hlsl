@@ -20,8 +20,8 @@ ConstantBuffer<GlobalConstants>     g_Global                    : register(b1, s
 
 RWStructuredBuffer<uint64_t>        u_SharcHashEntriesBuffer    : register(u0, space3);
 RWStructuredBuffer<uint>            u_HashCopyOffsetBuffer      : register(u1, space3);
-RWByteAddressBuffer                 u_SharcVoxelDataBuffer      : register(u2, space3);
-RWByteAddressBuffer                 u_SharcVoxelDataBufferPrev  : register(u3, space3);
+RWStructuredBuffer<uint4>           u_SharcVoxelDataBuffer      : register(u2, space3);
+RWStructuredBuffer<uint4>           u_SharcVoxelDataBufferPrev  : register(u3, space3);
 
 [numthreads(LINEAR_BLOCK_SIZE, 1, 1)]
 void sharcHashCopy(in uint2 did : SV_DispatchThreadID)

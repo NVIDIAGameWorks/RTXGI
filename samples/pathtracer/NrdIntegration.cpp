@@ -94,7 +94,7 @@ bool NrdIntegration::Initialize(uint32_t width, uint32_t height, donut::engine::
 
     const nrd::DenoiserDesc denoiserDescs[] =
     {
-        { m_identifier, m_denoiser, uint16_t(width), uint16_t(height)}
+        { m_identifier, m_denoiser}
     };
 
     nrd::InstanceCreationDesc instanceCreationDesc = {};
@@ -127,16 +127,8 @@ bool NrdIntegration::Initialize(uint32_t width, uint32_t height, donut::engine::
             addressMode = nvrhi::SamplerAddressMode::Clamp;
             filter = false;
             break;
-        case nrd::Sampler::NEAREST_MIRRORED_REPEAT:
-            addressMode = nvrhi::SamplerAddressMode::Mirror;
-            filter = false;
-            break;
         case nrd::Sampler::LINEAR_CLAMP:
             addressMode = nvrhi::SamplerAddressMode::Clamp;
-            filter = true;
-            break;
-        case nrd::Sampler::LINEAR_MIRRORED_REPEAT:
-            addressMode = nvrhi::SamplerAddressMode::Mirror;
             filter = true;
             break;
         default:
@@ -268,10 +260,9 @@ bool NrdIntegration::Initialize(uint32_t width, uint32_t height, donut::engine::
         ss << "NRD " << (isPermanent ? "Permanent" : "Transient") << "Texture [" << (isPermanent ? i : i - instanceDesc.permanentPoolSize) << "]";
 
         nvrhi::TextureDesc textureDesc;
-        textureDesc.width = nrdTextureDesc.width;
-        textureDesc.height = nrdTextureDesc.height;
+        textureDesc.width = width;
+        textureDesc.height = height;
         textureDesc.format = format;
-        textureDesc.mipLevels = nrdTextureDesc.mipNum;
         textureDesc.dimension = nvrhi::TextureDimension::Texture2D;
         textureDesc.initialState = nvrhi::ResourceStates::ShaderResource;
         textureDesc.keepInitialState = true;
@@ -341,6 +332,14 @@ void NrdIntegration::RunDenoiserPasses(
     commonSettings.cameraJitter[1] = pixelOffset.y;
     commonSettings.cameraJitterPrev[0] = prevPixelOffset.x;
     commonSettings.cameraJitterPrev[1] = prevPixelOffset.y;
+    commonSettings.resourceSize[0] = view.GetViewExtent().width();
+    commonSettings.resourceSize[1] = view.GetViewExtent().height();
+    commonSettings.resourceSizePrev[0] = viewPrev.GetViewExtent().width();
+    commonSettings.resourceSizePrev[1] = viewPrev.GetViewExtent().height();
+    commonSettings.rectSize[0] = view.GetViewExtent().width();
+    commonSettings.rectSize[1] = view.GetViewExtent().height();
+    commonSettings.rectSizePrev[0] = viewPrev.GetViewExtent().width();
+    commonSettings.rectSizePrev[1] = viewPrev.GetViewExtent().height();
     commonSettings.frameIndex = frameIndex;
     commonSettings.enableValidation = enableValidation;
     commonSettings.disocclusionThreshold = disocclusionThreshold;
@@ -387,8 +386,6 @@ void NrdIntegration::RunDenoiserPasses(
                 assert(resourceIndex < dispatchDesc.resourcesNum);
                 const nrd::ResourceDesc& resource = dispatchDesc.resources[resourceIndex];
 
-                assert(resource.stateNeeded == nrdDescriptorRange.descriptorType);
-
                 nvrhi::TextureHandle texture;
                 switch (resource.type)
                 {
@@ -427,9 +424,6 @@ void NrdIntegration::RunDenoiserPasses(
                 assert(texture);
 
                 nvrhi::TextureSubresourceSet subresources = nvrhi::AllSubresources;
-                subresources.baseMipLevel = resource.mipOffset;
-                subresources.numMipLevels = resource.mipNum;
-
                 nvrhi::BindingSetItem setItem = nvrhi::BindingSetItem::None();
                 setItem.resourceHandle = texture;
                 setItem.slot = nrdDescriptorRange.baseRegisterIndex + descriptorOffset;

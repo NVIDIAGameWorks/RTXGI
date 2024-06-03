@@ -90,8 +90,8 @@ struct UIData
     ToneMappingOperator     toneMappingOperator = ToneMappingOperator::Reinhard;
     const char*             toneMappingOperatorStrings = "Linear\0Reinhard\0";
 
-#if ENABLE_NRC
     bool                    enableNrc = false;
+#if ENABLE_NRC
     bool                    nrcLearnIrradiance = true;
     bool                    nrcIncludeDirectIllumination = true;
     bool                    nrcTrainCache = true;

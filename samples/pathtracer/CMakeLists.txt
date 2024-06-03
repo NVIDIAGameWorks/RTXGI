@@ -51,9 +51,9 @@ set(SHARC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../sdk-libraries)
 
 # Shader Model 6_6 requires Agility SDK on Windows 10.
 if(DONUT_WITH_VULKAN)
-    set (SHADERMAKE_GENERAL_ARGS_SPIRV "--shaderModel 6_6 -I ${NRC_DIR}/include -I ${SHARC_INCLUDE_DIR}/Sharc/Shaders/Include --vulkanMemoryLayout dx")
+    set (SHADERMAKE_GENERAL_ARGS_SPIRV "--shaderModel 6_6 -I ${NRC_DIR}/include -I ${SHARC_INCLUDE_DIR}/Sharc/include --vulkanMemoryLayout dx")
 endif()
-set (SHADERMAKE_GENERAL_ARGS_DXIL "--shaderModel 6_6 --useAPI --WX --PDB -I ${NRC_DIR}/include -I ${SHARC_INCLUDE_DIR}/Sharc/Shaders/Include")
+set (SHADERMAKE_GENERAL_ARGS_DXIL "--shaderModel 6_6 --useAPI --WX --PDB -I ${NRC_DIR}/include -I ${SHARC_INCLUDE_DIR}/Sharc/include")
 
 donut_compile_shaders(
         TARGET ${project}_shaders

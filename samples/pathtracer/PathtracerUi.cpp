@@ -223,6 +223,14 @@ void PathtracerUI::buildUI(void)
             updateAccum |= ImGui::Checkbox("Include Direct Illumination", &m_ui.nrcIncludeDirectIllumination);
             updateAccum |= ImGui::Checkbox("Skip delta vertices", &m_ui.nrcSkipDeltaVertices);
             updateAccum |= ImGui::Checkbox("Enable Termination Heuristic", &m_ui.nrcEnableTerminationHeuristic); // Disable to view cache directly at query vertex 0
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::BeginTooltip();
+                ImGui::PushTextWrapPos(500.0f);
+                ImGui::TextUnformatted("Default heuristic of 0.01 falls between terminating at vertex one and two. Disable the heuristic to choose a specific vertex to terminate at. Terminating at vertex zero is equivalent to visualizing the cache directly.");
+                ImGui::PopTextWrapPos();
+                ImGui::EndTooltip();
+            }
             if (m_ui.nrcEnableTerminationHeuristic)
             {
                 updateAccum |= ImGui::SliderFloat("Heuristic Threshold", &m_ui.nrcTerminationHeuristicThreshold, 0.0f, 0.02f);

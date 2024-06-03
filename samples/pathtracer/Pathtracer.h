@@ -27,7 +27,7 @@ struct DescriptorSetIDs
     {
         Globals,
         Denoiser,
-        NRC,
+        Nrc,
         Sharc,
         Bindless,
         COUNT
@@ -98,10 +98,7 @@ public:
     bool CreateRayTracingPipelines();
 
 #if ENABLE_NRC
-    NrcIntegration* GetNrcInstance() const
-    {
-        return m_nrc.get();
-    }
+    NrcIntegration* GetNrcInstance() const;
 #endif
 
     void GetMeshBlasDesc(donut::engine::MeshInfo& mesh, nvrhi::rt::AccelStructDesc& blasDesc, bool skipTransmissiveMaterials) const;

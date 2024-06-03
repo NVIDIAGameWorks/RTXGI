@@ -30,6 +30,7 @@
 #define ENABLE_SPECULAR_LOBE 1
 
 #if ENABLE_NRC
+#define NRC_RW_STRUCTURED_BUFFER(T) RWStructuredBuffer<T>
 #include "NRCStructures.h"
 #endif // ENABLE_NRC
 

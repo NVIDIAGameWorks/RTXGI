@@ -25,6 +25,7 @@
 #include <string>
 #include <mutex>
 #include "../../donut/nvrhi/src/vulkan/vulkan-backend.h"
+
 using namespace donut::math;
 
 #define SAFE_RELEASE(x)                                                                                                                                                            \
@@ -75,7 +76,6 @@ static void NRCMemoryEventsCallback(nrc::MemoryEventType eventType, size_t size,
 
     static std::mutex loggerMutex;
 
-    // Make the logging thread-safe
     loggerMutex.lock();
     {
         std::string message = "NRC SDK Memory Stats: ";

@@ -37,5 +37,5 @@ This showcases an elementary path tracer that relies on either NRC or SHARC to t
 **7. Tone mapping.** Post processing section that currently only accounts for tone mapping - useful for clamping radiance values.
 
 [NrcGuide]: NrcGuide.md
-[SharcGuide]: SharcGuide.md
+[SharcGuide]: https://github.com/NVIDIAGameWorks/SHARC/blob/main/docs/Integration.md
 [Prereq]: ../README.md/#prerequisites
