@@ -29,20 +29,9 @@ namespace NrcUtils
         }
     }
 
-    std::string wstringToString(const std::wstring& wstr)
-    {
-        static std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
-        return converter.to_bytes(wstr);
-    }
-
-    std::wstring stringToWstring(const std::string& wstr)
+    std::wstring StringToWstring(const std::string& wstr)
     {
         std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
         return converter.from_bytes(wstr);
-    }
-
-    uint32_t divideRoundUp(uint32_t x, uint32_t divisor) 
-    { 
-        return (x + divisor - 1) / divisor; 
     }
 }

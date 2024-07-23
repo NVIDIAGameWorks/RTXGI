@@ -50,7 +50,16 @@ using namespace donut::engine;
 extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 610; }
 extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = ".\\D3D12\\"; }
 
+// TODO: Remove when this is addressed in Donut
+extern "C" { __declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;}
+extern "C" { __declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1; }
+
 static const char* g_WindowTitle = "Pathtracer";
+
+static uint32_t DivideRoundUp(uint32_t x, uint32_t divisor)
+{
+    return (x + divisor - 1) / divisor;
+}
 
 void InjectFeatures(VkDeviceCreateInfo& info)
 {
@@ -337,7 +346,7 @@ bool Pathtracer::Init(int argc, const char* const* argv)
             pipelineDesc.CS = m_sharcResolveCS;
             m_sharcResolvePSO = GetDevice()->createComputePipeline(pipelineDesc);
 
-            m_sharcHashCopyCS = m_shaderFactory->CreateShader("app/sharcResolve.hlsl", "sharcHashCopy", nullptr, nvrhi::ShaderType::Compute);
+            m_sharcHashCopyCS = m_shaderFactory->CreateShader("app/sharcResolve.hlsl", "sharcCompaction", nullptr, nvrhi::ShaderType::Compute);
             pipelineDesc.CS = m_sharcHashCopyCS;
             m_sharcHashCopyPSO = GetDevice()->createComputePipeline(pipelineDesc);
         }
@@ -377,7 +386,7 @@ bool Pathtracer::Init(int argc, const char* const* argv)
     }
 #endif // ENABLE_DENOISER
 
-    // Create the ToneMapping pass
+    // Create the tonemapping pass
     {
         nvrhi::BindingLayoutDesc bindingLayoutDesc;
         bindingLayoutDesc.visibility = nvrhi::ShaderType::Pixel;
@@ -389,7 +398,7 @@ bool Pathtracer::Init(int argc, const char* const* argv)
 
         m_tonemappingBindingLayout = GetDevice()->createBindingLayout(bindingLayoutDesc);
 
-        m_tonemappingShader = m_shaderFactory->CreateShader("app/tonemapping.hlsl", "main_ps", nullptr, nvrhi::ShaderType::Pixel);
+        m_tonemappingPS = m_shaderFactory->CreateShader("app/tonemapping.hlsl", "main_ps", nullptr, nvrhi::ShaderType::Pixel);
     }
 
     m_commandList = GetDevice()->createCommandList();
@@ -415,10 +424,7 @@ bool Pathtracer::CreateRayTracingPipelines()
 
 #if ENABLE_NRC
     m_pipelineMacros[PipelineType::NRC_Update].push_back(ShaderMacro("NRC_UPDATE", "1"));
-    m_pipelineMacros[PipelineType::NRC_Update].push_back(ShaderMacro("NRC_DEBUG_BUFFERS", m_nrc->GetDebugBuffersStatus() ? "1" : "0"));
-
     m_pipelineMacros[PipelineType::NRC_Query].push_back(ShaderMacro("NRC_QUERY", "1"));
-    m_pipelineMacros[PipelineType::NRC_Query].push_back(ShaderMacro("NRC_DEBUG_BUFFERS", m_nrc->GetDebugBuffersStatus() ? "1" : "0"));
     m_pipelineMacros[PipelineType::NRC_Query].push_back(ShaderMacro("ENABLE_DENOISER", enableDenoiserStr));
 #endif // ENABLE_NRC
 
@@ -962,10 +968,8 @@ void Pathtracer::Render(nvrhi::IFramebuffer* framebuffer)
         // Settings expected to change frequently that do not require instance reset
         nrc::FrameSettings nrcPerFrameSettings;
         nrcPerFrameSettings.maxExpectedAverageRadianceValue = m_ui.nrcMaxAverageRadiance;
-        nrcPerFrameSettings.enableTerminationHeuristic = m_ui.nrcEnableTerminationHeuristic;
         nrcPerFrameSettings.terminationHeuristicThreshold = m_ui.nrcTerminationHeuristicThreshold;
         nrcPerFrameSettings.trainingTerminationHeuristicThreshold = m_ui.nrcTerminationHeuristicThreshold;
-        nrcPerFrameSettings.queryVertexIndex = m_ui.nrcQueryVertexIndex;
         nrcPerFrameSettings.resolveMode = m_ui.nrcResolveMode;
 
         m_nrc->BeginFrame(m_commandList, nrcPerFrameSettings);
@@ -985,6 +989,8 @@ void Pathtracer::Render(nvrhi::IFramebuffer* framebuffer)
         constants.sharcRoughnessThreshold = m_ui.sharcRoughnessThreshold;
         constants.sharcCameraPositionPrev.xyz() = sharcCameraPositionPrev;
         constants.sharcCameraPosition.xyz() = sharcCameraPosition;
+        constants.sharcAccumulationFrameNum = m_ui.sharcAccumulationFrameNum;
+        constants.sharcStaleFrameNum = m_ui.sharcStaleFrameFrameNum;
 
         if (m_ui.sharcEnableUpdate)
         {
@@ -1069,6 +1075,9 @@ void Pathtracer::Render(nvrhi::IFramebuffer* framebuffer)
     globalConstants.samplesPerPixel = m_ui.samplesPerPixel;
     globalConstants.exposureScale = donut::math::exp2f(m_ui.exposureAdjustment);
     globalConstants.roughnessMin = m_ui.roughnessMin;
+    globalConstants.roughnessMax = std::max(m_ui.roughnessMin, m_ui.roughnessMax);
+    globalConstants.metalnessMin = m_ui.metalnessMin;
+    globalConstants.metalnessMax = std::max(m_ui.metalnessMin, m_ui.metalnessMax);
 
     globalConstants.clamp = (uint)m_ui.toneMappingClamp;
     globalConstants.toneMappingOperator = (uint)m_ui.toneMappingOperator;
@@ -1077,9 +1086,7 @@ void Pathtracer::Render(nvrhi::IFramebuffer* framebuffer)
     globalConstants.debugOutputMode = (uint)m_ui.ptDebugOutput;
 
 #if ENABLE_NRC
-    globalConstants.nrcEnableTerminationHeuristic = m_ui.nrcEnableTerminationHeuristic;
     globalConstants.nrcSkipDeltaVertices = m_ui.nrcSkipDeltaVertices;
-    globalConstants.nrcQueryVertexIndex = m_ui.nrcQueryVertexIndex; // Only needed when heuristic is disabled
     globalConstants.nrcTerminationHeuristicThreshold = m_ui.nrcTerminationHeuristicThreshold;
 #endif // ENABLE_NRC
 
@@ -1234,20 +1241,20 @@ void Pathtracer::Render(nvrhi::IFramebuffer* framebuffer)
                     m_commandList->setComputeState(computeState);
 
                     const uint groupSize = 256;
-                    const dm::uint2 dispatchSize = { (m_sharcEntriesNum + groupSize - 1) / groupSize, 1 };
+                    const dm::uint2 dispatchSize = { DivideRoundUp(m_sharcEntriesNum, groupSize), 1 };
 
                     ScopedMarker scopedMarker(m_commandList, "SharcResolve");
                     m_commandList->dispatch(dispatchSize.x, dispatchSize.y);
                 }
 
-                // SHARC hash copy
+                // SHARC compaction
                 {
                     computeState.pipeline = m_sharcHashCopyPSO;
                     m_commandList->setComputeState(computeState);
 
                     const uint groupSize = 256;
-                    const dm::uint2 dispatchSize = { (m_sharcEntriesNum + groupSize - 1) / groupSize, 1 };
-                    ScopedMarker scopedMarker(m_commandList, "SharcHashCopy");
+                    const dm::uint2 dispatchSize = { DivideRoundUp(m_sharcEntriesNum, groupSize), 1 };
+                    ScopedMarker scopedMarker(m_commandList, "SharcCompaction");
                     m_commandList->dispatch(dispatchSize.x, dispatchSize.y);
                 }
             }
@@ -1294,7 +1301,7 @@ void Pathtracer::Render(nvrhi::IFramebuffer* framebuffer)
             m_commandList->setComputeState(computeState);
 
             const uint groupSize = 16;
-            const dm::uint2 dispatchSize = { (fbInfo.width + groupSize - 1) / groupSize, (fbInfo.height + groupSize - 1) / groupSize };
+            const dm::uint2 dispatchSize = { DivideRoundUp(fbInfo.width, groupSize), DivideRoundUp(fbInfo.height, groupSize) };
             m_commandList->dispatch(dispatchSize.x, dispatchSize.y);
         }
 
@@ -1309,15 +1316,13 @@ void Pathtracer::Render(nvrhi::IFramebuffer* framebuffer)
             m_commandList->setComputeState(computeState);
 
             const uint groupSize = 16;
-            const dm::uint2 dispatchSize = { (fbInfo.width + groupSize - 1) / groupSize, (fbInfo.height + groupSize - 1) / groupSize };
+            const dm::uint2 dispatchSize = { DivideRoundUp(fbInfo.width, groupSize), DivideRoundUp(fbInfo.height, groupSize) };
             m_commandList->dispatch(dispatchSize.x, dispatchSize.y);
         }
-
-        m_CommonPasses->BlitTexture(m_commandList, framebuffer, m_pathTracerOutputBuffer, m_bindingCache.get());
     }
 #endif // ENABLE_DENOISER
 
-    // Accumulation and tone mapping
+    // Accumulation and tonemapping
     {
         if (!m_accumulationBuffer)
         {
@@ -1337,7 +1342,7 @@ void Pathtracer::Render(nvrhi::IFramebuffer* framebuffer)
             nvrhi::GraphicsPipelineDesc pipelineDesc;
             pipelineDesc.primType = nvrhi::PrimitiveType::TriangleStrip;
             pipelineDesc.VS = m_CommonPasses->m_FullscreenVS;
-            pipelineDesc.PS = m_tonemappingShader;
+            pipelineDesc.PS = m_tonemappingPS;
             pipelineDesc.bindingLayouts = { m_tonemappingBindingLayout };
 
             pipelineDesc.renderState.rasterState.setCullNone();

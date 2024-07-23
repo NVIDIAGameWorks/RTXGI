@@ -77,10 +77,15 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 set(DONUT_SHADERS_OUTPUT_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders/framework")
 
-set(COMPILE_FROM_TC_BUILD_AGENT FALSE CACHE BOOL "Flag required by TeamCity build agent for setup.")
 
 # Setup option for local NRC library development
 set(CUSTOM_NRC_DISTRO_PATH "" CACHE PATH "Enter the path to NRC distro directory containing lib, include, and bin.")
+
+# Options for NRC DLL signing verification
+option(NRC_ENABLE_DLL_CHECK "Enable NRC DLL signing verification." ON)
+if(NRC_ENABLE_DLL_CHECK)
+  add_compile_definitions(NRC_ENABLE_DLL_CHECK)
+endif()
 
 # Check if the custom directory path is provided.
 if(NOT CUSTOM_NRC_DISTRO_PATH)
@@ -113,15 +118,6 @@ if(NVRHI_WITH_VULKAN OR NVRHI_WITH_DX12)
 	set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT pathtracer)
 endif()
 
-# if(NOT COMPILE_FROM_TC_BUILD_AGENT)
-#     message(STATUS "Updating git submodules ...")
-#     find_package(Git REQUIRED)
-#     execute_process(
-#         COMMAND ${GIT_EXECUTABLE} submodule update --init
-#         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-#         COMMAND_ERROR_IS_FATAL ANY
-#     )
-# endif()
 
 # Add SHARC includes to the solution
 set(SHARC_LIBRARY_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/sdk-libraries/sharc")

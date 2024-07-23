@@ -700,7 +700,7 @@ float Beckmann_D(float alphaSquared, float NdotH)
 
 float GGX_D(float alphaSquared, float NdotH) {
 	float b = ((alphaSquared - 1.0f) * saturate(NdotH * NdotH) + 1.0f);
-	b = max(b, 0.001f);
+	b = max(b, 0.0000001f);
 	return alphaSquared / (PI * b * b);
 }
 
@@ -857,6 +857,24 @@ float3 evalMicrofacet(const BrdfData data) {
 //    Combined BRDF
 // -------------------------------------------------------------------------
 
+// Calculates all the BRDF fields that depend on the L (light direction) vector
+// Expects N and V to be set correctly
+void setBRDFDataLightDirection(inout BrdfData data, float3 L)
+{
+	data.H = normalize(L + data.V);
+	data.L = L;
+
+	float NdotL = dot(data.N, data.L);
+	data.Lbackfacing = (NdotL <= 0.0f);
+
+	// Clamp NdotS to prevent numerical instability. Assume vectors below the hemisphere will be filtered using 'Vbackfacing' and 'Lbackfacing' flags
+	data.NdotL = min(max(0.00001f, NdotL), 1.0f);
+
+	data.LdotH = saturate(dot(data.L, data.H));
+	data.NdotH = saturate(dot(data.N, data.H));
+	data.VdotH = saturate(dot(data.V, data.H));
+}
+
 // Precalculates commonly used terms in BRDF evaluation
 // Clamps around dot products prevent NaNs and ensure numerical stability, but make sure to
 // correctly ignore rays outside of the sampling hemisphere, by using 'Vbackfacing' and 'Lbackfacing' flags
@@ -866,21 +884,13 @@ BrdfData prepareBRDFData(float3 N, float3 L, float3 V, MaterialSample material) 
 	// Evaluate VNHL vectors
 	data.V = V;
 	data.N = N;
-	data.H = normalize(L + V);
-	data.L = L;
+	setBRDFDataLightDirection(data, L);
 
-	float NdotL = dot(N, L);
 	float NdotV = dot(N, V);
 	data.Vbackfacing = (NdotV <= 0.0f);
-	data.Lbackfacing = (NdotL <= 0.0f);
 
 	// Clamp NdotS to prevent numerical instability. Assume vectors below the hemisphere will be filtered using 'Vbackfacing' and 'Lbackfacing' flags
-	data.NdotL = min(max(0.00001f, NdotL), 1.0f);
 	data.NdotV = min(max(0.00001f, NdotV), 1.0f);
-
-	data.LdotH = saturate(dot(L, data.H));
-	data.NdotH = saturate(dot(N, data.H));
-	data.VdotH = saturate(dot(V, data.H));
 
 	// Unpack material properties
 	data.specularF0 = (material.hasMetalRoughParams) ? baseColorToSpecularF0(material.baseColor, material.metalness) : material.specularF0;
@@ -984,9 +994,10 @@ bool evalIndirectCombinedBRDF(float2 u, float3 shadingNormal, float3 geometryNor
 		pdf = diffusePdf(data.NdotL);
 
 	} else if (brdfType == SPECULAR_TYPE) {
-		const BrdfData data = prepareBRDFData(Nlocal, float3(0.0f, 0.0f, 1.0f) /* unused L vector */, Vlocal, material);
+		BrdfData data = prepareBRDFData(Nlocal, float3(0.0f, 0.0f, 1.0f) /* unused L vector */, Vlocal, material);
 		rayDirectionLocal = sampleSpecular(Vlocal, data.alpha, data.alphaSquared, data.specularF0, u, 0.0f, sampleWeight);
-
+		
+		setBRDFDataLightDirection(data, rayDirectionLocal);
 		pdf = specularPdf(data.alpha, data.alphaSquared, data.NdotH, data.NdotV, data.LdotH);
 	}
 

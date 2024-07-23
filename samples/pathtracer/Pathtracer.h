@@ -150,7 +150,7 @@ private:
     nvrhi::GraphicsPipelineHandle m_tonemappingPSO;
     nvrhi::BindingLayoutHandle m_tonemappingBindingLayout;
     nvrhi::BindingSetHandle m_tonemappingBindingSet;
-    nvrhi::ShaderHandle m_tonemappingShader;
+    nvrhi::ShaderHandle m_tonemappingPS;
 
     nvrhi::rt::AccelStructHandle m_topLevelAS;
     bool m_rebuildAS = true;

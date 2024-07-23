@@ -26,19 +26,9 @@
 #include "lighting_cb.h"
 #include "PathtracerUtils.h"
 
-// Handle SHaRC defines.  TODO: Move this into SharcCommon.h
-#if (defined(SHARC_UPDATE) || defined(SHARC_QUERY))
-#if SHARC_UPDATE
-#define SHARC_QUERY 0
-#else
-#define SHARC_UPDATE 0
-#endif
-#define ENABLE_SHARC 1
-#include "SharcCommon.h"  // TODO: Rename this to Sharc.hlsli
-#else
-#define SHARC_QUERY 0
-#define SHARC_UPDATE 0
-#endif
+#if (SHARC_UPDATE || SHARC_QUERY)
+#include "SharcCommon.h"
+#endif // (SHARC_UPDATE || SHARC_QUERY)
 
 #define BOUNCES_MIN                     3
 #define RIS_CANDIDATES_LIGHTS           8 // Number of candidates used for resampling of analytical lights
@@ -98,17 +88,9 @@ RWStructuredBuffer<NrcPackedPathVertex>         trainingPathVertices            
 RWStructuredBuffer<NrcRadianceParams>           queryRadianceParams                     : register(u3, space2);
 RWStructuredBuffer<uint>                        countersData                            : register(u4, space2);
 
-#if NRC_DEBUG_BUFFERS
-RWStructuredBuffer<NrcDebugTrainingPathInfo>    debugTrainingPathInfo                   : register(u5, space2);
-
-#define WRITE_TRAINING_DEBUG_PARAMS , debugUnpackedTrainingPathVertices
-#define WRITE_TRAINING_OUTPUT_DEBUG_PARAMS , debugUnpackedTrainingPathVertices, debugUnpackedTrainingPathInfo
-#define WRITE_QUERY_OUTPUT_DEBUG_PARAMS , debugUnpackedPathInfo
-#else // !NRC_DEBUG_BUFFERS
 #define WRITE_TRAINING_DEBUG_PARAMS
 #define WRITE_TRAINING_OUTPUT_DEBUG_PARAMS
 #define WRITE_QUERY_OUTPUT_DEBUG_PARAMS
-#endif // !NRC_DEBUG_BUFFERS
 #endif // ENABLE_NRC
 
 #if SHARC_UPDATE || SHARC_QUERY
@@ -392,7 +374,6 @@ void AnyHit(inout RayPayload payload : SV_RayPayload, in Attributes attrib : SV_
     // AcceptHit but continue looking for the closest hit
 }
 
-// TODO: Delete this
 [shader("miss")]
 void ShadowMiss(inout ShadowRayPayload payload : SV_RayPayload)
 {
@@ -490,20 +471,6 @@ void ResolveSampleData(inout AccumulatedSampleData accumulatedSampleData, uint s
     u_Output[DispatchRaysIndex().xy] = float4(accumulatedSampleData.radiance, 1.0f);
 #endif // !ENABLE_DENOISER
 }
-
-#if ENABLE_SHARC
-float GetCacheOccupancy(uint offset, uint batchSize)
-{
-    uint entriesNum = 0;
-    for (uint i = 0; i < batchSize; ++i)
-    {
-        HashKey hashKey = u_SharcHashEntriesBuffer[offset + i];
-        entriesNum += hashKey != HASH_GRID_INVALID_HASH_KEY ? 1 : 0;
-    }
-
-    return entriesNum / (float)batchSize;
-}
-#endif // ENABLE_SHARC
 
 void PathTraceRays()
 {
@@ -642,7 +609,15 @@ void PathTraceRays()
             GeometrySample geometry = getGeometryFromHit(payload.instanceID, payload.primitiveIndex, payload.geometryIndex, payload.barycentrics, GeomAttr_All, t_InstanceData, t_GeometryData, t_MaterialConstants);
             MaterialSample material = SampleGeometryMaterial(geometry, 0, 0, 0, MatAttr_All, s_MaterialSampler, t_BindlessTextures);
             material.emissiveColor = g_Global.enableEmissives ? material.emissiveColor : 0;
-            material.roughness = max(material.roughness, g_Global.roughnessMin);
+
+            if (material.hasMetalRoughParams)
+            {
+                // Remap roughness and metalness according to the UI sliders
+                material.roughness = lerp(g_Global.roughnessMin, g_Global.roughnessMax, material.roughness);
+                material.metalness = lerp(g_Global.metalnessMin, g_Global.metalnessMax, material.metalness);
+                material.diffuseAlbedo = lerp(material.baseColor * (1.0 - c_DielectricSpecular), 0.0, material.metalness);
+                material.specularF0 = lerp(c_DielectricSpecular, material.baseColor.rgb, material.metalness);
+            }
 
             // Flip normals towards the incident ray direction (needed for backfacing triangles)
             float3 viewVector = -ray.Direction;
@@ -667,7 +642,7 @@ void PathTraceRays()
             surfaceAttributes.diffuseReflectance = material.diffuseAlbedo;
             surfaceAttributes.shadingNormal = shadingNormal;
             surfaceAttributes.viewVector = viewVector;
-            surfaceAttributes.isDeltaLobe = material.roughness == 0.0f; // Set to true for perfectly smooth surfaces
+            surfaceAttributes.isDeltaLobe = (material.metalness == 1.0f && material.roughness == 0.0f); // Set to true for perfectly smooth surfaces
                 
             float hitDistance = payload.hitDistance;
 
@@ -694,12 +669,12 @@ void PathTraceRays()
             {
                 uint gridLevel = GetGridLevel(hitPos, sharcState.gridParameters);
                 float voxelSize = GetVoxelSize(gridLevel, sharcState.gridParameters);
-                bool isValidHit = payload.hitDistance > voxelSize * lerp(1.0f, 2.0f, Rand(rngState));
+                bool isValidHit = payload.hitDistance > voxelSize * sqrt(3.0f);
 
                 materialRoughnessPrev = min(materialRoughnessPrev, 0.99f);
                 float alpha = materialRoughnessPrev * materialRoughnessPrev;
                 float footrprint = payload.hitDistance * sqrt(0.5f * alpha * alpha / (1.0f - alpha * alpha));
-                isValidHit &= footrprint * lerp(1.0f, 1.5f, Rand(rngState)) > voxelSize;
+                isValidHit &= footrprint > voxelSize;
 
                 float3 sharcRadiance;
                 if (isValidHit && SharcGetCachedRadiance(sharcState, sharcHitData, sharcRadiance, false))
@@ -863,7 +838,7 @@ void PathTraceRays()
             // Run importance sampling of selected BRDF to generate reflecting ray direction
             float3 brdfWeight = float3(0.0f, 0.0f, 0.0f);
             float brdfPdf = 0.0f;
-            float refractiveIndex = 1.0f; // ior //1.1f;
+            float refractiveIndex = 1.0f;
 
             // Generates a new ray direction
             float2 rand2 = float2(Rand(rngState), Rand(rngState));

@@ -69,19 +69,42 @@ Assuming the application already has a pathtracer and associated requirements su
     <em><small>Figure 4. An overview of the integration steps. Initialization is carried out before the render loop, the (re)configuration step is only invoked when context settings change, whilst the remaining tasks occur per-frame. The update and query passes rely on the application's provided pathtracer. If the signal is split per BRDF, the application can define a custom resolve pass instead of relying on the NRC library in-built resolve.</small></em>
 </p>
 
-## At Load-time
-### Inclusion of library contents
+
+## Step 1. Inclusion of library contents
 At this stage, the application will include the headers inside the provided **/include**, as well as link against prebuilt binaries available in the same package (see **/bin** and **/lib**). The Resolve pass and kernels used internally by the NRC library come packaged as part of the binary and as such it is not necessary to provide or explicitly load external shader files.
 
-## At Run-time
 > 💡 **Optional integration class.** 
 > 
-> *The application can invoke the public NRC functions in-place, where they are required, or can opt for the creation of an integration class to encapsulate the functionality (as seen in [samples/pathtracer/NrcIntegration.h][SampleNrcIntegh]). The latter approach is used in the pathtracer example for ease of readability and demonstration of the library's functionality; it is not enforced as a best-practice.*
+> *The application can invoke the public NRC functions in-place, where they are required, or can opt for the creation of an integration class to encapsulate the functionality (as seen in [samples/pathtracer/NrcIntegration.h][SampleNrcIntegh]). The latter approach is used in the pathtracer example for ease of readability and demonstration of the library's functionality for D3D12 and Vulkan; **it is not enforced as a best-practice**.*
 
 
-### At the start of the application (only once)
+## Step 2. Initialization and memory management mode selection
 
-#### Step 1 - Initialization and memory management mode selection
+### Step 2.1. NRC DLL Signature verification
+The NRC library provides a utility function for DLL signature verification `NRC_DECLSPEC Status VerifySignature(const wchar_t* fullPathToFile)`. For example usage on Windows see the Initialization methods for D3D12 and Vulkan in [NrcIntegration.cpp][SampleNrcIntegc].
+
+### Step 2.2. Vulkan only - features and extensions
+For the Vulkan API, an additional step is required compared to the D3D12 counterpart, namely extension and feature specification at device-creation time. To achieve this, invoke the provided helper functions:
+
+```cpp
+uint32_t GetVulkanDeviceExtensions(char const* const*& outStringArray);
+uint32_t GetVulkanInstanceExtensions(char const* const*& outStringArray);
+uint32_t GetVulkanDeviceFeatures(char const* const*& outStringArray);
+```
+
+The following features have to be available (already part of core 2.1.) **and enabled**:
+```cpp
+VK_EXT_SCALAR_BLOCK_LAYOUT_EXTENSION_NAME
+VK_KHR_UNIFORM_BUFFER_STANDARD_LAYOUT_EXTENSION_NAME
+VK_EXT_scalar_block_layout
+```
+
+> ❗ **Resource memory layout specification**
+> 
+> *NRC relies on `-fvk-use-dx-layout`. If a custom resolve pass is required, bare this in mind. Read more about alignment in the [DirectX Shader Compiler docs][DocsMemoryLayout].*
+
+
+### Step 2.3. Context initialization
 This is typically achieved in the application's `Init()` step. First, set up NRC's `GlobalSettings`. Here the application can hook a logger callback for intercepting NRC library messages as well as specifying which memory management mode should be used (consult the following section for further details).
 
 Initialize the library by invoking:
@@ -94,15 +117,14 @@ Next, create an NRC context:
 status = nrc::d3d12::Context::Create(nativeDevice5, m_nrcContext);
 ``` 
 
-> ❗ At this point, the neural network has not yet been created. This is achieved in the configuration step.
+❗ At this point, the neural network has *not* yet been created. This is achieved in the configuration step.
 
 **Selection of memory management.** The NRC library caters for two approaches when it comes to managing its buffers, controlled via the `globalSettings.enableGPUMemoryAllocation` switch is for. When the SDK manages the buffers internally, this flag should be enabled first at initialization time. After that, using the helper function `GetBuffers()`, the application will only create views (_handles_) to these buffers. They are required during path tracing and in a scenario where a custom resolve pass is necessary (more on this in the Resolve section).
 If buffers are managed on the application side, the flag will be disabled, and the buffers will be created by the application during the configuration step using `GetBuffersAllocationInfo(const ContextSettings& contextSettings, BuffersAllocationInfo& outBuffersAllocationInfo)` to inform properties such as element size and stride, which types of views are allowed, etc.
 
 > 💡 [NrcIntegration.cpp][SampleNrcIntegc] illustrates both approaches depending on the state of the flag. This is available for D3D12 and Vulkan implementations. 
 
-### (Re)configuration (on a per-need basis)
-#### Step 2 - Configure
+## Step 3. (Re)configuration (on a per-need basis)
 This is expected to occur infrequently when constituent parts of the `ContextSettings` have changed. E.g. on level load, or when the screen resolution changes. This reloads the neural network configuration and may require buffers to be reallocated.
 
 Considerations when using Configure:
@@ -112,9 +134,8 @@ Considerations when using Configure:
 
 - If `Configure` is a part of the render loop, it could cause a hitch if any of the context settings have changed and a tear-down is required.
 
-### Per frame setup
 
-#### Step 3 - NRC constants update
+## Step 4. NRC constants update
 The NRC library differentiates between settings that seldomly change (`ContextSettings`) and settings that change per-frame (`FrameSettings`).
 
 At the start of the frame, invoke:
@@ -131,7 +152,7 @@ Status PopulateShaderConstants(NrcConstants& outConstants) const;
 The `NrcConstants` structure is intended to be passed to the pathtracer inside a constant buffer. It can be included as part of an existing constant buffer for the pathtracer. Its content is derived from `FrameSettings` and `ContextSettings`.
 
 
-#### Step 4 - Pathtracer setup
+## Step 5. Pathtracer setup
 The NRC requires two pathtracer passes - one for updating (writing path data for training the NN), and one for querying (creating query points where the NN will predict radiance).
 
 1) The update pass runs at lower-than-target resolution. It is recommended to rely on the auxiliary function to obtain this resolution and set it on the `ContextSettings` early on:
@@ -232,7 +253,7 @@ void RayGenFunc()
 
 > 💡 If the application's pathtracer carries out the work in Closest-Hit Shader (CHS) then the `NrcPathState` has to be packed inside the payload and communicated between stages.
 
-#### Step 5 - Query and Train
+## Step 6. Query and Train
 Once the pathtracer passes complete, the neural network predicts radiance at the query points. Internally, the NRC library propagates the radiance based on the predicted values and the path data. This is immediately followed by the training of the network which relies on the training data from the propagation. This optimizes the network to produce accurate radiace predictions.
 
 All the aforementioned steps are achieved in a single exposed API call:
@@ -240,7 +261,7 @@ All the aforementioned steps are achieved in a single exposed API call:
 Status QueryAndTrain(ID3D12GraphicsCommandList4* cmdList, float* trainingLossPtr)
 ```
 
-#### Step 6 - The resolve pass
+## Step 7. The resolve pass
 The final radiance is not obtained in-line in the pathtracer. As such, a separate pass is required to compute the final result. The NRC library exposes an API call to an in-built resolve pass which assumes the signal is combined. This pass takes the predicted radiance from the query records, modulates by the throughput of the path, and adds the result to the final image.
 ```cpp
 Status Resolve(ID3D12GraphicsCommandList4* cmdList, ID3D12Resource* outputBuffer);
@@ -278,7 +299,7 @@ In the above scenario, the pathtracer uses a probabilistic selection of BRDF typ
 > 💡 The in-built resolve pass can be used for visually debugging the NRC. See the [Debugging][DebugMethods] section for details.
 
 
-#### Step 7 - End of frame  
+## Step 8. End of frame  
 This is when `EndFrame(ID3D12CommandQueue* cmdQueue)` is invoked once the command list has been submitted.The command queue must be the same one that was used to execute all the previous command lists.
 
 ### Application Shutdown (only once)
@@ -298,8 +319,10 @@ void Shutdown()
 ## Debug visualizations
 The NRC library provides several ways to visually inspect the quality of the cache data and narrow down potential integration errors. This can be achieved at the pathtracer level and at the resolve pass level.
 
-### Direct visualization of the cache
-This is achieved in the path tracer by always querying vertex index 0. The pathtracer sample in RTXGI showcases this usage. In the UI "Enable Termination Heuristic" should be disabled and the "Query Vertex Index" selection should be set to 0. When inspecting the direct visualization of the cache, indirect signal as well as defined shadows should be present. Boiling-like artifacts are expected as the NRC is not intended to be _used_ in this way, only previewed for troubleshooting.
+### Resolve pass debug visualization 
+Similar to the path tracer debug views, the in-built Resolve pass can be used for debugging by switching its `ResolveMode`. This caters for several types of debug cache data visualizations including a result of the query, a training bounce heatmap, training radiance (raw and smoothed) output, and a direct visualization of the cache. 
+
+When inspecting the direct visualization of the cache, indirect signal as well as defined shadows should be present. Boiling-like artifacts are expected as the NRC is not intended to be _used_ in this way, only previewed for troubleshooting.
 
 ![DebugCacheVis][DebugCacheVis]
 <p align="center">
@@ -308,8 +331,7 @@ This is achieved in the path tracer by always querying vertex index 0. The patht
 
 > 💡 This debug view should match the pathtracer's intensity closely. If it does not match the intensity or looks flat and lacks details (such as shadows), it could indicate that the radiance is not correctly recorded in the pathtracer passes, or that the update pass does not trace a small fraction to the full length.
 
-### Resolve pass debug visualization 
-Similar to the path tracer debug views, the in-built Resolve pass caters for several types of cache data visualizations including a result of the query, a training bounce heatmap, and training radiance (raw and smoothed) output. The training bounce heatmap is similar to the pathtracer bounce visualization and ensures that during the update pass, paths are traced on average to four bounces and a  fraction (~16th of the paths) at full length. The visualization of the training radiances at the primary path vertex, should match closely, when accumulated/smoothed, to the ground-truth path tracer output (when the NRC is disabled).
+The training bounce heatmap is similar to the pathtracer bounce visualization and ensures that during the update pass, paths are traced on average to four bounces and a  fraction (~16th of the paths) at full length. The visualization of the training radiances at the primary path vertex, should match closely, when accumulated/smoothed, to the ground-truth path tracer output (when the NRC is disabled).
 
 ![DebugAll][DebugAll]
 <p align="center">
@@ -353,6 +375,7 @@ The Structured Memory Configuration feature in Nsight comes in handy for inspect
 [nrcbin]: ../sdk-libraries/nrc/bin
 [nrcinc]: ../sdk-libraries/nrc/include
 [nrclib]: ../sdk-libraries/nrc/lib
+[DocsMemoryLayout]: https://github.com/Microsoft/DirectXShaderCompiler/blob/main/docs/SPIR-V.rst#memory-layout-rules
 [SampleNrcIntegh]: ../samples/pathtracer/NrcIntegration.h
 [SampleNrcIntegc]: ../samples/pathtracer/NrcIntegration.cpp
 [NrcPathtracing]: figures/nrc_intropath.png
@@ -362,8 +385,8 @@ The Structured Memory Configuration feature in Nsight comes in handy for inspect
 [DebugCacheVis]: figures/nrc_debugcachevis.gif
 [DebugAll]: figures/nrc_debugresolve.png
 [DebugNsight]: figures/nrc_debugnsight.png
-[NrcD3d12h]: ../sdk-libraries/nrc/include/NrcD3d12.h
-[NrcVkh]: ../sdk-libraries/nrc/include/NrcVk.h
-[Nrchlsli]: ../sdk-libraries/nrc/include/Nrc.hlsli
-[NrcHelp]: ../sdk-libraries/nrc/include/NrcHelpers.hlsli
-[NrcStruct]: ../sdk-libraries/nrc/include/NrcStructures.h
+[NrcD3d12h]: https://github.com/NVIDIAGameWorks/NRC/blob/main/include/NrcD3d12.h
+[NrcVkh]: https://github.com/NVIDIAGameWorks/NRC/blob/main/include/NrcVk.h
+[Nrchlsli]: https://github.com/NVIDIAGameWorks/NRC/blob/main/include/Nrc.hlsli
+[NrcHelp]: https://github.com/NVIDIAGameWorks/NRC/blob/main/include/NrcHelpers.hlsli
+[NrcStruct]: https://github.com/NVIDIAGameWorks/NRC/blob/main/include/NrcStructures.h

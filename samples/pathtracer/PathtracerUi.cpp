@@ -170,6 +170,9 @@ void PathtracerUI::buildUI(void)
             updateAccum |= ImGui::SliderInt("Samples Per Pixel", &m_ui.samplesPerPixel, 1, 16);
             updateAccum |= ImGui::SliderFloat("Exposure Adjustment", &m_ui.exposureAdjustment, -8.f, 8.0f);
             updateAccum |= ImGui::SliderFloat("Roughness Min", &m_ui.roughnessMin, 0.0f, 1.0f);
+            updateAccum |= ImGui::SliderFloat("Roughness Max", &m_ui.roughnessMax, 0.0f, 1.0f);
+            updateAccum |= ImGui::SliderFloat("Metalness Min", &m_ui.metalnessMin, 0.0f, 1.0f);
+            updateAccum |= ImGui::SliderFloat("Metalness Max", &m_ui.metalnessMax, 0.0f, 1.0f);
 
             // Debug views
             updateAccum |= ImGui::Combo("Debug Output", (int*)&m_ui.ptDebugOutput, m_ui.ptDebugOutputTypeStrings);
@@ -222,28 +225,12 @@ void PathtracerUI::buildUI(void)
             updateAccum |= ImGui::Checkbox("Learn Irradiance", &m_ui.nrcLearnIrradiance);
             updateAccum |= ImGui::Checkbox("Include Direct Illumination", &m_ui.nrcIncludeDirectIllumination);
             updateAccum |= ImGui::Checkbox("Skip delta vertices", &m_ui.nrcSkipDeltaVertices);
-            updateAccum |= ImGui::Checkbox("Enable Termination Heuristic", &m_ui.nrcEnableTerminationHeuristic); // Disable to view cache directly at query vertex 0
-            if (ImGui::IsItemHovered())
-            {
-                ImGui::BeginTooltip();
-                ImGui::PushTextWrapPos(500.0f);
-                ImGui::TextUnformatted("Default heuristic of 0.01 falls between terminating at vertex one and two. Disable the heuristic to choose a specific vertex to terminate at. Terminating at vertex zero is equivalent to visualizing the cache directly.");
-                ImGui::PopTextWrapPos();
-                ImGui::EndTooltip();
-            }
-            if (m_ui.nrcEnableTerminationHeuristic)
-            {
-                updateAccum |= ImGui::SliderFloat("Heuristic Threshold", &m_ui.nrcTerminationHeuristicThreshold, 0.0f, 0.02f);
-            }
-            else
-            {
-                updateAccum |= ImGui::SliderInt("Query Vertex Index", &m_ui.nrcQueryVertexIndex, 0, (m_ui.bouncesMax - 1));
-            }
-            updateAccum |= ImGui::SliderFloat("Max Average Radiance Value", &m_ui.nrcMaxAverageRadiance, 0.001f, 1000.0f);                                                                                      // TODO: Add memory bandwidth
+            updateAccum |= ImGui::SliderFloat("Heuristic Threshold", &m_ui.nrcTerminationHeuristicThreshold, 0.0f, 0.1f);
+            updateAccum |= ImGui::SliderFloat("Max Average Radiance Value", &m_ui.nrcMaxAverageRadiance, 0.001f, 1000.0f);
 
             updateAccum |= ImGui::Combo(
                 "Resolve Mode", (int*)&m_ui.nrcResolveMode,
-                "Add Query (Default)\0Show Query\0Training HeatMap\0Training HeatMap Smoothed\0Training Radiance\0Training Radiance Smoothed\0Query Index\0Training Query Index\0");
+                "Add Query (Default)\0Show Query\0Training HeatMap\0Training HeatMap Smoothed\0Training Radiance\0Training Radiance Smoothed\0Query Index\0Training Query Index\0Debug Cache View\0");
 
             ImGui::EndDisabled();
         }
@@ -270,6 +257,8 @@ void PathtracerUI::buildUI(void)
             updateAccum |= ImGui::Checkbox("Enable Update", &m_ui.sharcEnableUpdate);
             updateAccum |= ImGui::Checkbox("Enable Resolve", &m_ui.sharcEnableResolve);
             updateAccum |= ImGui::Checkbox("Enable Debug", &m_ui.sharcEnableDebug);
+            updateAccum |= ImGui::SliderInt("Accumulation Frame Number", &m_ui.sharcAccumulationFrameNum, 1, 30);
+            updateAccum |= ImGui::SliderInt("Stale Frame Number", &m_ui.sharcStaleFrameFrameNum, 1, 128);
             updateAccum |= ImGui::SliderInt("Downscale Factor", &m_ui.sharcDownscaleFactor, 1, 10);
             updateAccum |= ImGui::SliderFloat("Scene Scale", &m_ui.sharcSceneScale, 5.0f, 100.0f);
             updateAccum |= ImGui::SliderFloat("Rougness Threshold", &m_ui.sharcRoughnessThreshold, 0.0f, 1.0f);

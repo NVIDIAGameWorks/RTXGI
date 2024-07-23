@@ -24,7 +24,7 @@ RWStructuredBuffer<uint4>           u_SharcVoxelDataBuffer      : register(u2, s
 RWStructuredBuffer<uint4>           u_SharcVoxelDataBufferPrev  : register(u3, space3);
 
 [numthreads(LINEAR_BLOCK_SIZE, 1, 1)]
-void sharcHashCopy(in uint2 did : SV_DispatchThreadID)
+void sharcCompaction(in uint2 did : SV_DispatchThreadID)
 {
     HashMapData hashMapData;
     hashMapData.capacity = g_Lighting.sharcEntriesNum;
@@ -46,5 +46,5 @@ void sharcResolve(in uint2 did : SV_DispatchThreadID)
     hashMapData.capacity = g_Lighting.sharcEntriesNum;
     hashMapData.hashEntriesBuffer = u_SharcHashEntriesBuffer;
 
-    SharcResolveEntry(did.x, gridParameters, hashMapData, u_HashCopyOffsetBuffer, u_SharcVoxelDataBuffer, u_SharcVoxelDataBufferPrev);
+    SharcResolveEntry(did.x, gridParameters, hashMapData, u_HashCopyOffsetBuffer, u_SharcVoxelDataBuffer, u_SharcVoxelDataBufferPrev, g_Lighting.sharcAccumulationFrameNum, g_Lighting.sharcStaleFrameNum);
 }

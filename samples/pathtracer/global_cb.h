@@ -58,13 +58,15 @@ struct GlobalConstants
 
     uint nrcEnableTerminationHeuristic;
     uint nrcSkipDeltaVertices;
-    uint nrcQueryVertexIndex; // Only needed when heuristic is disabled
+    uint pad0;
     float nrcTerminationHeuristicThreshold;
 
     float4 nrdHitDistanceParams;
 
     float roughnessMin;
-    float3 padding;
+    float roughnessMax;
+    float metalnessMin;
+    float metalnessMax;
 };
 
 #define EXIT_MAX_BOUNCE         0

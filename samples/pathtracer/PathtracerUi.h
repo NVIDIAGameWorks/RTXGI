@@ -71,6 +71,9 @@ struct UIData
     int                     accumulatedFramesMax = 128;
     float                   exposureAdjustment = 0.0f;
     float                   roughnessMin = 0.0f;
+    float                   roughnessMax = 1.0f;
+    float                   metalnessMin = 0.0f;
+    float                   metalnessMax = 1.0f;
     bool                    enableSky = true;
     bool                    enableEmissives = true;
     bool                    enableLighting = true;
@@ -103,11 +106,8 @@ struct UIData
     uint32_t                nrcTrainingHeight = 0;
 
     // Settings used by the path tracer
-    bool                    nrcEnableTerminationHeuristic = true;
     bool                    nrcSkipDeltaVertices = false;
-    int                     nrcQueryVertexIndex = 0;
     float                   nrcTerminationHeuristicThreshold = 0.01f;
-
     bool                    nrcWriteDebugBuffers = false;
     bool                    nrcCopyDebugReadbackBuffers = false;
     bool                    nrcDebugBuffersHaveBeenCopied = false;
@@ -123,6 +123,8 @@ struct UIData
     bool                    sharcEnableDebug = false;
     int                     sharcDownscaleFactor = 5;
     float                   sharcSceneScale = 50.0f;
+    int                     sharcAccumulationFrameNum = 10;
+    int                     sharcStaleFrameFrameNum = 64;
     float                   sharcRoughnessThreshold = 0.4f;
 #endif // ENABLE_SHARC
 

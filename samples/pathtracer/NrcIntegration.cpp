@@ -15,6 +15,12 @@
 #include <NrcVk.h>
 #endif
 
+#ifdef NRC_ENABLE_DLL_CHECK
+#include "NrcSecurity.h"
+#include <Psapi.h>
+#include <codecvt>
+#endif
+
 #include <nvrhi/utils.h>
 #include <donut/core/math/math.h>
 #include <donut/engine/View.h>
@@ -46,7 +52,7 @@ static const bool g_enableSDKMemoryAllocation = true;
 static const bool g_useCustomCPUMemoryAllocator = false;
 
 // Utility
-static void NRCLoggerCallback(const char* message, nrc::LogLevel logLevel)
+static void NrcLoggerCallback(const char* message, nrc::LogLevel logLevel)
 {
 
     static std::mutex loggerMutex;
@@ -57,7 +63,7 @@ static void NRCLoggerCallback(const char* message, nrc::LogLevel logLevel)
         const int kMinLogLevel = (int)nrc::LogLevel::Info;
         if (((int)logLevel >= kMinLogLevel) || (logLevel == nrc::LogLevel::Error))
         {
-            std::wstring wstr = NrcUtils::stringToWstring(message);
+            std::wstring wstr = NrcUtils::StringToWstring(message);
             OutputDebugString(wstr.c_str());
 #if 0
             if (logLevel == nrc::LogLevel::Error)
@@ -71,7 +77,7 @@ static void NRCLoggerCallback(const char* message, nrc::LogLevel logLevel)
     loggerMutex.unlock();
 }
 
-static void NRCMemoryEventsCallback(nrc::MemoryEventType eventType, size_t size, const char* bufferName)
+static void NrcMemoryEventsCallback(nrc::MemoryEventType eventType, size_t size, const char* bufferName)
 {
 
     static std::mutex loggerMutex;
@@ -100,12 +106,12 @@ static void NRCMemoryEventsCallback(nrc::MemoryEventType eventType, size_t size,
     loggerMutex.unlock();
 }
 
-static void* NRCCustomAllocatorCallback(const size_t bytes)
+static void* NrcCustomAllocatorCallback(const size_t bytes)
 {
     return (void*)new char[bytes];
 }
 
-static void NRCCustomDeallocatorCallback(void* pointer, const size_t bytes)
+static void NrcCustomDeallocatorCallback(void* pointer, const size_t bytes)
 {
     delete[] pointer;
 }
@@ -113,7 +119,6 @@ static void NRCCustomDeallocatorCallback(void* pointer, const size_t bytes)
 static void FillBufferDescs(nvrhi::BufferDesc* bufferDescs, nrc::BuffersAllocationInfo const& buffersAllocationInfo)
 {
     // Create an array of nvrhi::BufferDesc for the nrc buffers
-
     for (uint i = 0; i < (uint)nrc::BufferIdx::Count; ++i)
     {
         nvrhi::BufferDesc& bufferDesc = bufferDescs[i];
@@ -155,6 +160,19 @@ static void CreateResources(nvrhi::BufferDesc const* bufferDescs, NrcBufferHandl
     }
 }
 
+#ifdef NRC_ENABLE_DLL_CHECK
+const std::wstring GetDllPath(const std::wstring& dllName)
+{
+    HMODULE hMod = GetModuleHandle(dllName.c_str());
+
+    wchar_t path[MAX_PATH];
+    DWORD size = GetModuleFileNameW(hMod, path, MAX_PATH);
+    assert (size != 0);
+    
+    return std::wstring(path, size);
+}
+#endif
+
 class NrcD3d12Integration : public NrcIntegration 
 {
 public:
@@ -164,14 +182,14 @@ public:
         nrc::GlobalSettings globalSettings;
 
         // First, set logger callbacks for catching messages from NRC
-        globalSettings.loggerFn = &NRCLoggerCallback;
-        globalSettings.memoryLoggerFn = &NRCMemoryEventsCallback;
+        globalSettings.loggerFn = &NrcLoggerCallback;
+        globalSettings.memoryLoggerFn = &NrcMemoryEventsCallback;
 
         // Optionally, use custom CPU memory provided by the user application
         if (g_useCustomCPUMemoryAllocator)
         {
-            globalSettings.allocatorFn = &NRCCustomAllocatorCallback;
-            globalSettings.deallocatorFn = &NRCCustomDeallocatorCallback;
+            globalSettings.allocatorFn = &NrcCustomAllocatorCallback;
+            globalSettings.deallocatorFn = &NrcCustomDeallocatorCallback;
         }
 
         globalSettings.enableGPUMemoryAllocation = g_enableSDKMemoryAllocation;
@@ -180,7 +198,16 @@ public:
         m_enableDebugBuffers = globalSettings.enableDebugBuffers;
 
         // Initialize the NRC Library
-        nrc::Status status = nrc::d3d12::Initialize(globalSettings);
+        nrc::Status status = nrc::Status::OK;
+
+        // Verify the signature of the loaded NRC DLL
+#ifdef NRC_ENABLE_DLL_CHECK
+        nrc::security::VerifySignature(GetDllPath(L"NRC_D3D12.dll").c_str()) ? status = nrc::Status::OK : status = nrc::Status::InternalError;
+        if (status != nrc::Status::OK)
+            return m_initialized;
+#endif
+
+        status = nrc::d3d12::Initialize(globalSettings);
         if (status != nrc::Status::OK)
             return m_initialized;
 
@@ -333,11 +360,6 @@ public:
         m_nrcContext->PopulateShaderConstants(outConstants);
     }
 
-    bool GetDebugBuffersStatus() const
-    {
-        return m_enableDebugBuffers;
-    }
-
     nrc::d3d12::Buffers m_buffers;
 
 private:
@@ -353,14 +375,14 @@ public:
         nrc::GlobalSettings globalSettings;
 
         // First, set logger callbacks for catching messages from NRC
-        globalSettings.loggerFn = &NRCLoggerCallback;
-        globalSettings.memoryLoggerFn = &NRCMemoryEventsCallback;
+        globalSettings.loggerFn = &NrcLoggerCallback;
+        globalSettings.memoryLoggerFn = &NrcMemoryEventsCallback;
 
         // Optionally, use custom CPU memory provided by the user application
         if (g_useCustomCPUMemoryAllocator)
         {
-            globalSettings.allocatorFn = &NRCCustomAllocatorCallback;
-            globalSettings.deallocatorFn = &NRCCustomDeallocatorCallback;
+            globalSettings.allocatorFn = &NrcCustomAllocatorCallback;
+            globalSettings.deallocatorFn = &NrcCustomDeallocatorCallback;
         }
 
         globalSettings.enableGPUMemoryAllocation = g_enableSDKMemoryAllocation;
@@ -369,7 +391,16 @@ public:
         m_enableDebugBuffers = globalSettings.enableDebugBuffers;
 
         // Initialize the NRC Library
-        nrc::Status status = nrc::vulkan::Initialize(globalSettings);
+        nrc::Status status = nrc::Status::OK;
+
+        // Verify the signature of the loaded NRC DLL
+#ifdef NRC_ENABLE_DLL_CHECK
+        nrc::security::VerifySignature(GetDllPath(L"NRC_Vulkan.dll").c_str()) ? status = nrc::Status::OK : status = nrc::Status::InternalError;
+        if (status != nrc::Status::OK)
+            return m_initialized;
+#endif
+
+        status = nrc::vulkan::Initialize(globalSettings);
         if (status != nrc::Status::OK)
         {
             return m_initialized;
@@ -456,9 +487,7 @@ public:
                 auto addressInfo = vk::BufferDeviceAddressInfo().setBuffer(m_buffers[bufferIdx].resource);
 
                 VkDevice nativeDevice = m_device->getNativeObject(nvrhi::ObjectTypes::VK_Device);
-                m_buffers[bufferIdx].deviceAddress = vk::Device(nativeDevice).getBufferAddress(addressInfo);
-
-                // TODO: account for Vk memory - required for resource deletion  
+                m_buffers[bufferIdx].deviceAddress = vk::Device(nativeDevice).getBufferAddress(addressInfo);  
             }
             status = m_nrcContext->Configure(contextSettings, &m_buffers);
         }
@@ -524,11 +553,6 @@ public:
     void PopulateShaderConstants(struct NrcConstants& outConstants) const
     {
         m_nrcContext->PopulateShaderConstants(outConstants);
-    }
-
-    bool GetDebugBuffersStatus() const
-    {
-        return m_enableDebugBuffers;
     }
 
     void AllocateOrCheckAllResources()

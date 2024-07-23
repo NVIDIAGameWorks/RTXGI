@@ -21,8 +21,5 @@ namespace NrcUtils
 {
     void Validate(HRESULT hr, LPWSTR message);
 
-    std::string wstringToString(const std::wstring& wstr);
-    std::wstring stringToWstring(const std::string& wstr);
-
-    uint32_t divideRoundUp(uint32_t x, uint32_t divisor);
+    std::wstring StringToWstring(const std::string& wstr);
 }

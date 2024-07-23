@@ -41,9 +41,9 @@ struct LightingConstants
     float4 skyColor;
 
     int lightCount;
+    int sharcAccumulationFrameNum;
+    int sharcStaleFrameNum;
     int padding_0;
-    int padding_1;
-    int padding_2;
 
     int sharcEntriesNum;
     int sharcDownscaleFactor;

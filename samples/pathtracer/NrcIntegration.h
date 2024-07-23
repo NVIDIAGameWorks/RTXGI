@@ -11,7 +11,7 @@
 #pragma once
 
 #include <nvrhi/nvrhi.h>
-#include <NRCCommon.h>
+#include <NrcCommon.h>
 #include <memory>
 
 // NVRHI handles to NRC Buffers
@@ -44,8 +44,6 @@ public:
     virtual size_t GetCurrentMemoryConsumption() const = 0;
 
     virtual void PopulateShaderConstants(struct NrcConstants& outConstants) const = 0;
-
-    virtual bool GetDebugBuffersStatus() const = 0;
 
     bool IsInitialized() const { return m_initialized; };
     

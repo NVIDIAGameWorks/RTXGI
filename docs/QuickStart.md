@@ -2,7 +2,7 @@
 
 This document lists the necessary steps to get up and running with the RTXGI SDK pathtracer sample showcasing an example integration of the NRC and SHARC libraries in a simplified unidirectional Monte Carlo path tracer. 
 
-For documentation and programming/integration guides specific to each technique, see the individual [NRC][NrcGuide] and [SHARC][SharcGuide] guides.
+For documentation and programming/integration guides specific to each technique, see the individual [NRC][NrcGuide] and [SHaRC][SharcGuide] guides.
 
 
 ### Build steps
@@ -18,7 +18,7 @@ Assuming the tools specified in the [prerequisites][Prereq] section are availabl
 3. Build the solution and run the `pathtracer` sample. Optionally, use the debug command line argument `-vk` to run the NVRHI Vulkan rendering backend version. 
 
 ### The pathtracer sample
-This showcases an elementary path tracer that relies on either NRC or SHARC to terminate early into the respective radiance/irradiance cache for an improved signal.
+This showcases an elementary path tracer that relies on either NRC or SHaRC to terminate early into the respective radiance/irradiance cache for an improved signal.
 
 ![overview](figures/quickstart_ui.png)
 
@@ -30,12 +30,12 @@ This showcases an elementary path tracer that relies on either NRC or SHARC to t
 
 **4. NRC settings.** In this section, NRC can be toggled, fine-tuned, as well as debugged visually via the `Resolve Mode` or by directly visualizing the cache data when disabling `Enable Termination Heuristic` and visualizing the state at vertex index 0. For further details see the [in-depth NRC guide][NrcGuide]. 
 
-**5. SHARC settings.** These provide a way to toggle the tech, manually invoke a clearing of the cache, fine-tune factors that contribute to the hash-grid data, as well as visually inspect the direct contents of the cache via the `Enable Debug` option. For further details see the [in-depth SHARC guide][SharcGuide].
+**5. SHARC settings.** These provide a way to toggle the tech, manually invoke a clearing of the cache, fine-tune factors that contribute to the hash-grid data, as well as visually inspect the direct contents of the cache via the `Enable Debug` option. For further details see the [in-depth SHaRC guide][SharcGuide].
 
 **6. Lighting.** This section allows for modifying the initial light data specified in the JSON scene file.
 
 **7. Tone mapping.** Post processing section that currently only accounts for tone mapping - useful for clamping radiance values.
 
 [NrcGuide]: NrcGuide.md
-[SharcGuide]: https://github.com/NVIDIAGameWorks/SHARC/blob/main/docs/Integration.md
+[SharcGuide]: SharcGuide.md
 [Prereq]: ../README.md/#prerequisites
