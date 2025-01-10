@@ -1,24 +1,12 @@
 /*
-* Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
-*
-* Permission is hereby granted, free of charge, to any person obtaining a
-* copy of this software and associated documentation files (the "Software"),
-* to deal in the Software without restriction, including without limitation
-* the rights to use, copy, modify, merge, publish, distribute, sublicense,
-* and/or sell copies of the Software, and to permit persons to whom the
-* Software is furnished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
-* THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-* DEALINGS IN THE SOFTWARE.
-*/
+ * Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * NVIDIA CORPORATION and its licensors retain all intellectual property
+ * and proprietary rights in and to this software, related documentation
+ * and any modifications thereto.  Any use, reproduction, disclosure or
+ * distribution of this software and related documentation without an express
+ * license agreement from NVIDIA CORPORATION is strictly prohibited.
+ */
 
 #define M_PI 3.141592653589f
 
@@ -89,31 +77,20 @@ float3 OffsetRay(const float3 p, const float3 n)
 
     int3 of_i = int3(int_scale * n.x, int_scale * n.y, int_scale * n.z);
 
-    float3 p_i = float3(
-        asfloat(asint(p.x) + ((p.x < 0) ? -of_i.x : of_i.x)),
-        asfloat(asint(p.y) + ((p.y < 0) ? -of_i.y : of_i.y)),
-        asfloat(asint(p.z) + ((p.z < 0) ? -of_i.z : of_i.z)));
+    float3 p_i =
+        float3(asfloat(asint(p.x) + ((p.x < 0) ? -of_i.x : of_i.x)), asfloat(asint(p.y) + ((p.y < 0) ? -of_i.y : of_i.y)), asfloat(asint(p.z) + ((p.z < 0) ? -of_i.z : of_i.z)));
 
-    return float3(abs(p.x) < origin ? p.x + float_scale * n.x : p_i.x,
-        abs(p.y) < origin ? p.y + float_scale * n.y : p_i.y,
-        abs(p.z) < origin ? p.z + float_scale * n.z : p_i.z);
+    return float3(abs(p.x) < origin ? p.x + float_scale * n.x : p_i.x, abs(p.y) < origin ? p.y + float_scale * n.y : p_i.y, abs(p.z) < origin ? p.z + float_scale * n.z : p_i.z);
 }
 
 // Bounce heatmap visualization: https://developer.nvidia.com/blog/profiling-dxr-shaders-with-timer-instrumentation/
 inline float3 Temperature(float t)
 {
-    const float3 c[10] = {
-        float3(0.0f / 255.0f,   2.0f / 255.0f,  91.0f / 255.0f),
-        float3(0.0f / 255.0f, 108.0f / 255.0f, 251.0f / 255.0f),
-        float3(0.0f / 255.0f, 221.0f / 255.0f, 221.0f / 255.0f),
-        float3(51.0f / 255.0f, 221.0f / 255.0f,   0.0f / 255.0f),
-        float3(255.0f / 255.0f, 252.0f / 255.0f,   0.0f / 255.0f),
-        float3(255.0f / 255.0f, 180.0f / 255.0f,   0.0f / 255.0f),
-        float3(255.0f / 255.0f, 104.0f / 255.0f,   0.0f / 255.0f),
-        float3(226.0f / 255.0f,  22.0f / 255.0f,   0.0f / 255.0f),
-        float3(191.0f / 255.0f,   0.0f / 255.0f,  83.0f / 255.0f),
-        float3(145.0f / 255.0f,   0.0f / 255.0f,  65.0f / 255.0f)
-    };
+    const float3 c[10] = { float3(0.0f / 255.0f, 2.0f / 255.0f, 91.0f / 255.0f),    float3(0.0f / 255.0f, 108.0f / 255.0f, 251.0f / 255.0f),
+                           float3(0.0f / 255.0f, 221.0f / 255.0f, 221.0f / 255.0f), float3(51.0f / 255.0f, 221.0f / 255.0f, 0.0f / 255.0f),
+                           float3(255.0f / 255.0f, 252.0f / 255.0f, 0.0f / 255.0f), float3(255.0f / 255.0f, 180.0f / 255.0f, 0.0f / 255.0f),
+                           float3(255.0f / 255.0f, 104.0f / 255.0f, 0.0f / 255.0f), float3(226.0f / 255.0f, 22.0f / 255.0f, 0.0f / 255.0f),
+                           float3(191.0f / 255.0f, 0.0f / 255.0f, 83.0f / 255.0f),  float3(145.0f / 255.0f, 0.0f / 255.0f, 65.0f / 255.0f) };
 
     const float s = t * 10.0f;
 
@@ -169,17 +146,16 @@ struct GeometrySample
     float4 tangent;
 };
 
-GeometrySample GetGeometryFromHit(
-    uint instanceIndex,
-    uint triangleIndex,
-    uint geometryIndex,
-    bool isFrontFacing,
-    float2 rayBarycentrics,
-    GeometryAttributes attributes,
-    StructuredBuffer<InstanceData> instanceBuffer,
-    StructuredBuffer<GeometryData> geometryBuffer,
-    StructuredBuffer<MaterialConstants> materialBuffer,
-    ByteAddressBuffer bindlessBuffers[])
+GeometrySample GetGeometryFromHit(uint instanceIndex,
+                                  uint triangleIndex,
+                                  uint geometryIndex,
+                                  bool isFrontFacing,
+                                  float2 rayBarycentrics,
+                                  GeometryAttributes attributes,
+                                  StructuredBuffer<InstanceData> instanceBuffer,
+                                  StructuredBuffer<GeometryData> geometryBuffer,
+                                  StructuredBuffer<MaterialConstants> materialBuffer,
+                                  ByteAddressBuffer bindlessBuffers[])
 {
     GeometrySample gs = (GeometrySample)0;
 
@@ -237,9 +213,7 @@ GeometrySample GetGeometryFromHit(
         gs.tangent.w = tangents[0].w;
     }
 
-    float3 objectSpaceFlatNormal = normalize(cross(
-        gs.vertexPositions[1] - gs.vertexPositions[0],
-        gs.vertexPositions[2] - gs.vertexPositions[0]));
+    float3 objectSpaceFlatNormal = normalize(cross(gs.vertexPositions[1] - gs.vertexPositions[0], gs.vertexPositions[2] - gs.vertexPositions[0]));
 
     gs.flatNormal = normalize(mul(gs.instance.transform, float4(objectSpaceFlatNormal, 0.0f)).xyz);
     gs.flatNormal *= isFrontFacing ? 1.0f : -1.0f;
@@ -258,14 +232,13 @@ enum MaterialAttributes
     MatAttr_All = 0x1F
 };
 
-MaterialSample SampleGeometryMaterial(
-    GeometrySample gs,
-    float2 texGrad_x,
-    float2 texGrad_y,
-    float mipLevel, // <-- Use a compile time constant for mipLevel, < 0 for aniso filtering
-    MaterialAttributes attributes,
-    SamplerState materialSampler,
-    Texture2D bindlessTextures[])
+MaterialSample SampleGeometryMaterial(GeometrySample gs,
+                                      float2 texGrad_x,
+                                      float2 texGrad_y,
+                                      float mipLevel, // <-- Use a compile time constant for mipLevel, < 0 for aniso filtering
+                                      MaterialAttributes attributes,
+                                      SamplerState materialSampler,
+                                      Texture2D bindlessTextures[])
 {
     MaterialTextureSample textures = DefaultMaterialTextures();
 
@@ -344,9 +317,7 @@ void GetLightData(LightConstants light, float3 surfacePos, float2 rand2, bool en
             incidentVector = normalize(incidentVector);
         }
         else
-        {
             incidentVector = light.direction;
-        }
 
         lightDistance = FLT_MAX;
         halfAngularSize = light.angularSizeOrInvRange * 0.5f;
@@ -375,7 +346,6 @@ void GetLightData(LightConstants light, float3 surfacePos, float2 rand2, bool en
             float LdotD = dot(incidentVector, light.direction);
             float directionAngle = acos(LdotD);
             spotlight = 1.0f - smoothstep(light.innerAngle, light.outerAngle, directionAngle);
-
             if (spotlight == 0)
                 return;
         }
@@ -391,14 +361,10 @@ void GetLightData(LightConstants light, float3 surfacePos, float2 rand2, bool en
             irradiance = radianceTimesPi * solidAngleOverPi;
         }
         else
-        {
             irradiance = light.intensity * square(rDistance);
-        }
 
         irradiance *= spotlight * attenuation;
     }
     else
-    {
         return;
-    }
 }

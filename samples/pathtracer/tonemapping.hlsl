@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
  *
  * NVIDIA CORPORATION and its licensors retain all intellectual property
  * and proprietary rights in and to this software, related documentation
@@ -10,7 +10,7 @@
 
 #pragma pack_matrix(row_major)
 
-#include "global_cb.h"
+#include "GlobalCb.h"
 
 ConstantBuffer<GlobalConstants>     g_Global                    : register(b0);
 RWTexture2D<float4>                 pathTracingOutputBuffer     : register(u0);

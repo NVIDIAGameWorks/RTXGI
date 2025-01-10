@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2025, NVIDIA CORPORATION. All rights reserved.
 # 
 # NVIDIA CORPORATION and its licensors retain all intellectual property
 # and proprietary rights in and to this software, related documentation
@@ -74,6 +74,8 @@ set (
 )
 
 # Compile all shaders in nrd_shaders.cfg 
+include(${CMAKE_CURRENT_SOURCE_DIR}/donut/compileshaders.cmake)
+
 donut_compile_shaders(
     TARGET nrd_shaders
     CONFIG ${CMAKE_CURRENT_SOURCE_DIR}/nrd.cfg
@@ -82,9 +84,8 @@ donut_compile_shaders(
     DXIL ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders/nrd/dxil
     SPIRV_DXC ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders/nrd/spirv
     CFLAGS "-WX -O3 -enable-16bit-types -all_resources_bound"
-    COMPILER_OPTIONS_DXIL ${SHADERMAKE_GENERAL_ARGS}
-    COMPILER_OPTIONS_SPIRV ${SHADERMAKE_GENERAL_ARGS}
-    #INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/RayTracingDenoiser/External/MathLib INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/RayTracingDenoiser/Shaders/Include ${CMAKE_CURRENT_SOURCE_DIR}/RayTracingDenoiser/Shaders/Resources
+    SHADERMAKE_OPTIONS_DXIL ${SHADERMAKE_GENERAL_ARGS}
+    SHADERMAKE_OPTIONS_SPIRV ${SHADERMAKE_GENERAL_ARGS}
 )
 
 set(RTXDI_SKIP_SHADER_VALIDATION ON CACHE STRING "Skip RTXDI shader validation")

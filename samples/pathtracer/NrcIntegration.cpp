@@ -1,12 +1,12 @@
 /*
-* Copyright (c) 2024, NVIDIA CORPORATION.  All rights reserved.
-*
-* NVIDIA CORPORATION and its licensors retain all intellectual property
-* and proprietary rights in and to this software, related documentation
-* and any modifications thereto.  Any use, reproduction, disclosure or
-* distribution of this software and related documentation without an express
-* license agreement from NVIDIA CORPORATION is strictly prohibited.
-*/
+ * Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * NVIDIA CORPORATION and its licensors retain all intellectual property
+ * and proprietary rights in and to this software, related documentation
+ * and any modifications thereto.  Any use, reproduction, disclosure or
+ * distribution of this software and related documentation without an express
+ * license agreement from NVIDIA CORPORATION is strictly prohibited.
+ */
 
 #include "NrcIntegration.h"
 #include "NrcUtils.h"
@@ -35,13 +35,13 @@
 using namespace donut::math;
 
 #define SAFE_RELEASE(x)                                                                                                                                                            \
-   {                                                                                                                                                                              \
-       if (x)                                                                                                                                                                     \
-       {                                                                                                                                                                          \
-           x->Release();                                                                                                                                                          \
-           x = NULL;                                                                                                                                                              \
-       }                                                                                                                                                                          \
-   }
+    {                                                                                                                                                                              \
+        if (x)                                                                                                                                                                     \
+        {                                                                                                                                                                          \
+            x->Release();                                                                                                                                                          \
+            x = NULL;                                                                                                                                                              \
+        }                                                                                                                                                                          \
+    }
 
 static const D3D12_HEAP_PROPERTIES g_uploadHeapProperties = { D3D12_HEAP_TYPE_UPLOAD, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
 static const D3D12_HEAP_PROPERTIES g_defaultHeapProperties = { D3D12_HEAP_TYPE_DEFAULT, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0 };
@@ -150,13 +150,9 @@ static void CreateResources(nvrhi::BufferDesc const* bufferDescs, NrcBufferHandl
         nvrhi::BufferDesc const& bufferDesc = bufferDescs[i];
         const nrc::BufferIdx bufferIdx = (nrc::BufferIdx)i;
         if (bufferDesc.byteSize > 0)
-        {
             m_nrcBufferHandles[bufferIdx] = device->createBuffer(bufferDesc);
-        }
         else
-        {
             m_nrcBufferHandles[bufferIdx] = nullptr;
-        }
     }
 }
 
@@ -167,16 +163,15 @@ const std::wstring GetDllPath(const std::wstring& dllName)
 
     wchar_t path[MAX_PATH];
     DWORD size = GetModuleFileNameW(hMod, path, MAX_PATH);
-    assert (size != 0);
-    
+    assert(size != 0);
+
     return std::wstring(path, size);
 }
 #endif
 
-class NrcD3d12Integration : public NrcIntegration 
+class NrcD3d12Integration : public NrcIntegration
 {
 public:
-
     bool Initialize(nvrhi::IDevice* device)
     {
         nrc::GlobalSettings globalSettings;
@@ -264,13 +259,9 @@ public:
                 const nrc::BufferIdx bufferIdx = (nrc::BufferIdx)i;
                 nrc::d3d12::BufferInfo const& bufferInfo = buffers[bufferIdx];
                 if (bufferInfo.resource != nullptr)
-                {
                     m_bufferHandles[bufferIdx] = m_device->createHandleForNativeBuffer(nvrhi::ObjectTypes::D3D12_Resource, bufferInfo.resource, bufferDescs[i]);
-                }
                 else
-                {
                     m_bufferHandles[bufferIdx] = nullptr;
-                }
             }
         }
         else
@@ -334,7 +325,8 @@ public:
 
     void EndFrame(nvrhi::CommandQueue* cmdQueue)
     {
-        ID3D12CommandQueue* nativeCmdQueue = reinterpret_cast<ID3D12CommandQueue*>(m_device->getNativeQueue(nvrhi::ObjectTypes::D3D12_CommandQueue, nvrhi::CommandQueue::Graphics).pointer);
+        ID3D12CommandQueue* nativeCmdQueue =
+            reinterpret_cast<ID3D12CommandQueue*>(m_device->getNativeQueue(nvrhi::ObjectTypes::D3D12_CommandQueue, nvrhi::CommandQueue::Graphics).pointer);
         if (nativeCmdQueue)
         {
             nrc::Status status = m_nrcContext->EndFrame(nativeCmdQueue);
@@ -349,9 +341,8 @@ public:
 
         size_t totalAllocatedMemory = 0;
         for (nrc::d3d12::BufferInfo const& buffer : buffers.buffers)
-        {
             totalAllocatedMemory += buffer.allocatedSize;
-        }
+
         return totalAllocatedMemory;
     }
 
@@ -402,9 +393,7 @@ public:
 
         status = nrc::vulkan::Initialize(globalSettings);
         if (status != nrc::Status::OK)
-        {
             return m_initialized;
-        }
 
         // Create an NRC Context
         VkDevice nativeDevice = device->getNativeObject(nvrhi::ObjectTypes::VK_Device);
@@ -418,9 +407,7 @@ public:
             m_device = device;
 
             if (!m_initialized && (status == nrc::Status::OK))
-            {
                 m_initialized = true;
-            }
         }
         return m_initialized;
     }
@@ -462,13 +449,9 @@ public:
                 const nrc::BufferIdx bufferIdx = (nrc::BufferIdx)i;
                 nrc::vulkan::BufferInfo const& bufferInfo = buffers[bufferIdx];
                 if (bufferInfo.resource != nullptr)
-                {
                     m_bufferHandles[bufferIdx] = m_device->createHandleForNativeBuffer(nvrhi::ObjectTypes::VK_Buffer, bufferInfo.resource, bufferDescs[i]);
-                }
                 else
-                {
                     m_bufferHandles[bufferIdx] = nullptr;
-                }
             }
         }
         else
@@ -487,15 +470,13 @@ public:
                 auto addressInfo = vk::BufferDeviceAddressInfo().setBuffer(m_buffers[bufferIdx].resource);
 
                 VkDevice nativeDevice = m_device->getNativeObject(nvrhi::ObjectTypes::VK_Device);
-                m_buffers[bufferIdx].deviceAddress = vk::Device(nativeDevice).getBufferAddress(addressInfo);  
+                m_buffers[bufferIdx].deviceAddress = vk::Device(nativeDevice).getBufferAddress(addressInfo);
             }
             status = m_nrcContext->Configure(contextSettings, &m_buffers);
         }
 
         if (status != nrc::Status::OK)
-        {
             NrcUtils::Validate(E_FAIL, LPWSTR(L"NRC Configure step failed."));
-        }
     }
 
     void BeginFrame(nvrhi::ICommandList* cmdList, const nrc::FrameSettings& frameSettings)
@@ -529,9 +510,7 @@ public:
         {
             nrc::Status status = m_nrcContext->QueryAndTrain(buffer, (calculateTrainingLoss ? &trainingLoss : nullptr));
             if (status != nrc::Status::OK)
-            {
                 NrcUtils::Validate(E_FAIL, LPWSTR(L"NRC QueryAndTrain call failed."));
-            }
         }
 
         return trainingLoss;
@@ -567,9 +546,8 @@ public:
 
         size_t totalAllocatedMemory = 0;
         for (nrc::vulkan::BufferInfo const& buffer : buffers.buffers)
-        {
             totalAllocatedMemory += buffer.allocatedSize;
-        }
+
         return totalAllocatedMemory;
     }
 
@@ -577,7 +555,6 @@ public:
 
 private:
     nrc::vulkan::Context* m_nrcContext;
-    
 };
 
 std::unique_ptr<NrcIntegration> CreateNrcIntegration(nvrhi::GraphicsAPI api)

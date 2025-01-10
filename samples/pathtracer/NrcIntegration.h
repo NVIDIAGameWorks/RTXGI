@@ -1,12 +1,12 @@
 /*
-* Copyright (c) 2024, NVIDIA CORPORATION.  All rights reserved.
-*
-* NVIDIA CORPORATION and its licensors retain all intellectual property
-* and proprietary rights in and to this software, related documentation
-* and any modifications thereto.  Any use, reproduction, disclosure or
-* distribution of this software and related documentation without an express
-* license agreement from NVIDIA CORPORATION is strictly prohibited.
-*/
+ * Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * NVIDIA CORPORATION and its licensors retain all intellectual property
+ * and proprietary rights in and to this software, related documentation
+ * and any modifications thereto.  Any use, reproduction, disclosure or
+ * distribution of this software and related documentation without an express
+ * license agreement from NVIDIA CORPORATION is strictly prohibited.
+ */
 
 #pragma once
 
@@ -20,8 +20,14 @@ struct NrcBufferHandles
     nvrhi::BufferHandle nrcBufferHandles[(int)nrc::BufferIdx::Count];
 
     // Allow direct access to the array with nrc::BufferIdx
-    const nvrhi::BufferHandle& operator[](nrc::BufferIdx idx) const { return nrcBufferHandles[(int)idx]; }
-    nvrhi::BufferHandle& operator[](nrc::BufferIdx idx) { return nrcBufferHandles[(int)idx]; }
+    const nvrhi::BufferHandle& operator[](nrc::BufferIdx idx) const
+    {
+        return nrcBufferHandles[(int)idx];
+    }
+    nvrhi::BufferHandle& operator[](nrc::BufferIdx idx)
+    {
+        return nrcBufferHandles[(int)idx];
+    }
 };
 
 class NrcIntegration
@@ -45,8 +51,11 @@ public:
 
     virtual void PopulateShaderConstants(struct NrcConstants& outConstants) const = 0;
 
-    bool IsInitialized() const { return m_initialized; };
-    
+    bool IsInitialized() const
+    {
+        return m_initialized;
+    };
+
     NrcBufferHandles m_bufferHandles;
 
 protected:
@@ -55,7 +64,7 @@ protected:
     bool m_enableDebugBuffers;
     nrc::BuffersAllocationInfo m_buffersAllocation;
     nrc::ContextSettings m_contextSettings;
-    nrc::FrameSettings m_frameSettings;  
+    nrc::FrameSettings m_frameSettings;
 };
 
 std::unique_ptr<NrcIntegration> CreateNrcIntegration(nvrhi::GraphicsAPI);

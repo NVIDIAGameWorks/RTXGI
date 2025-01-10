@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
  *
  * NVIDIA CORPORATION and its licensors retain all intellectual property
  * and proprietary rights in and to this software, related documentation
@@ -38,21 +38,33 @@ using namespace donut::engine;
 
 #include "../../donut/nvrhi/src/vulkan/vulkan-backend.h"
 
-#include "lighting_cb.h"
-#include "global_cb.h"
+#include "LightingCb.h"
+#include "GlobalCb.h"
 
-#if ENABLE_DENOISER
+#if ENABLE_NRD
 #include "NrdConfig.h"
-#endif // ENABLE_DENOISER
+#endif // ENABLE_NRD
 
 // Required for Agility SDK on Windows 10. Setup 1.c. 2.a.
 // https://devblogs.microsoft.com/directx/gettingstarted-dx12agility/
-extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 610; }
-extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = ".\\D3D12\\"; }
+extern "C"
+{
+    __declspec(dllexport) extern const UINT D3D12SDKVersion = 610;
+}
+extern "C"
+{
+    __declspec(dllexport) extern const char* D3D12SDKPath = ".\\D3D12\\";
+}
 
 // TODO: Remove when this is addressed in Donut
-extern "C" { __declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;}
-extern "C" { __declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1; }
+extern "C"
+{
+    __declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
+}
+extern "C"
+{
+    __declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+}
 
 static const char* g_WindowTitle = "Pathtracer";
 
@@ -96,10 +108,7 @@ std::filesystem::path GetLocalPath(std::string subfolder)
     return oneChoice;
 }
 
-Pathtracer::Pathtracer(DeviceManager* deviceManager, UIData& ui, nvrhi::GraphicsAPI api)
-    : ApplicationBase(deviceManager)
-    , m_ui(ui)
-    , m_api(api)
+Pathtracer::Pathtracer(DeviceManager* deviceManager, UIData& ui, nvrhi::GraphicsAPI api) : ApplicationBase(deviceManager), m_ui(ui), m_api(api)
 {
 }
 
@@ -118,24 +127,18 @@ bool Pathtracer::Init(int argc, const char* const* argv)
         const char* arg = argv[n];
 
         if (!strcmp(arg, "-accumulate"))
-            m_ui.enableAccumulation = true;
+            m_ui.denoiserSelection = DenoiserSelection::Accumulation;
         else if (!strcmp(arg, "-scene"))
             sceneName = (char*)argv[n + 1];
         else if (!strcmp(arg, "-camera"))
             m_cameraIndex = atoi(argv[n + 1]);
 #if ENABLE_NRC
         else if (!strcmp(arg, "-nrc"))
-        {
-            m_ui.currentMode = TechSelection::Nrc;
-            m_ui.enableNrc = true;
-        }
+            m_ui.techSelection = TechSelection::Nrc;
 #endif // ENABLE_NRC
 #if ENABLE_SHARC
         else if (!strcmp(arg, "-sharc"))
-        {
-            m_ui.currentMode = TechSelection::Sharc;
-            m_ui.enableSharc = true;
-        }
+            m_ui.techSelection = TechSelection::Sharc;
 #endif // ENABLE_SHARC
     }
 
@@ -166,16 +169,17 @@ bool Pathtracer::Init(int argc, const char* const* argv)
             sceneFileName += ".scene.json";
     }
 
-#if ENABLE_DENOISER
+#if ENABLE_NRD
     std::filesystem::path nrdShaderPath = app::GetDirectoryWithExecutable() / "shaders/nrd" / app::GetShaderTypeName(GetDevice()->getGraphicsAPI());
     m_rootFileSystem->mount("/shaders/nrd", nrdShaderPath);
-#endif // ENABLE_DENOISER
+#endif // ENABLE_NRD
 
     // Get all scenes in "media" folder
     for (const auto& file : std::filesystem::directory_iterator(GetLocalPath("media")))
     {
         if (!file.is_regular_file())
             continue;
+
         std::string fileName = file.path().filename().string();
         std::string longExt = (fileName.size() <= mediaExt.length()) ? ("") : (fileName.substr(fileName.length() - mediaExt.length()));
         if (longExt == mediaExt)
@@ -194,10 +198,7 @@ bool Pathtracer::Init(int argc, const char* const* argv)
     bindlessLayoutDesc.visibility = nvrhi::ShaderType::All;
     bindlessLayoutDesc.firstSlot = 0;
     bindlessLayoutDesc.maxCapacity = 1024;
-    bindlessLayoutDesc.registerSpaces = {
-        nvrhi::BindingLayoutItem::RawBuffer_SRV(1),
-        nvrhi::BindingLayoutItem::Texture_SRV(2)
-    };
+    bindlessLayoutDesc.registerSpaces = { nvrhi::BindingLayoutItem::RawBuffer_SRV(1), nvrhi::BindingLayoutItem::Texture_SRV(2) };
 
     m_bindlessLayout = GetDevice()->createBindlessLayout(bindlessLayoutDesc);
     m_descriptorTable = std::make_shared<engine::DescriptorTableManager>(GetDevice(), m_bindlessLayout);
@@ -209,11 +210,11 @@ bool Pathtracer::Init(int argc, const char* const* argv)
 
     m_camera.SetMoveSpeed(3.f);
 
-    m_constantBuffer = GetDevice()->createBuffer(nvrhi::utils::CreateVolatileConstantBufferDesc(
-        sizeof(LightingConstants), "LightingConstants", engine::c_MaxRenderPassConstantBufferVersions));
+    m_constantBuffer =
+        GetDevice()->createBuffer(nvrhi::utils::CreateVolatileConstantBufferDesc(sizeof(LightingConstants), "LightingConstants", engine::c_MaxRenderPassConstantBufferVersions));
 
-    m_debugBuffer = GetDevice()->createBuffer(nvrhi::utils::CreateVolatileConstantBufferDesc(
-        sizeof(GlobalConstants), "GlobalConstants", engine::c_MaxRenderPassConstantBufferVersions));
+    m_debugBuffer =
+        GetDevice()->createBuffer(nvrhi::utils::CreateVolatileConstantBufferDesc(sizeof(GlobalConstants), "GlobalConstants", engine::c_MaxRenderPassConstantBufferVersions));
 
     // Unified binding
     nvrhi::BindingLayoutDesc bindingLayoutDesc;
@@ -242,20 +243,14 @@ bool Pathtracer::Init(int argc, const char* const* argv)
     };
     m_globalBindingLayout = GetDevice()->createBindingLayout(bindingLayoutDesc);
 
-#if ENABLE_DENOISER
+#if ENABLE_NRD
     bindingLayoutDesc.registerSpace = DescriptorSetIDs::Denoiser;
     bindingLayoutDesc.bindings = {
-        nvrhi::BindingLayoutItem::Texture_UAV(0),
-        nvrhi::BindingLayoutItem::Texture_UAV(1),
-        nvrhi::BindingLayoutItem::Texture_UAV(2),
-        nvrhi::BindingLayoutItem::Texture_UAV(3),
-        nvrhi::BindingLayoutItem::Texture_UAV(4),
-        nvrhi::BindingLayoutItem::Texture_UAV(5),
-        nvrhi::BindingLayoutItem::Texture_UAV(6),
-        nvrhi::BindingLayoutItem::Texture_UAV(7),
+        nvrhi::BindingLayoutItem::Texture_UAV(0), nvrhi::BindingLayoutItem::Texture_UAV(1), nvrhi::BindingLayoutItem::Texture_UAV(2), nvrhi::BindingLayoutItem::Texture_UAV(3),
+        nvrhi::BindingLayoutItem::Texture_UAV(4), nvrhi::BindingLayoutItem::Texture_UAV(5), nvrhi::BindingLayoutItem::Texture_UAV(6), nvrhi::BindingLayoutItem::Texture_UAV(7),
     };
     m_denoiserBindingLayout = GetDevice()->createBindingLayout(bindingLayoutDesc);
-#endif // ENABLE_DENOISER
+#endif // ENABLE_NRD
 
 #if ENABLE_NRC
     bindingLayoutDesc.registerSpace = DescriptorSetIDs::Nrc;
@@ -284,7 +279,7 @@ bool Pathtracer::Init(int argc, const char* const* argv)
     if (!CreateRayTracingPipelines())
         return false;
 
-    // Prepare resources for the SHARC copy and resolve compute passes
+        // Prepare resources for the SHARC copy and resolve compute passes
 #if ENABLE_SHARC
     {
         m_sharcEntriesNum = 4 * 1024 * 1024;
@@ -337,7 +332,7 @@ bool Pathtracer::Init(int argc, const char* const* argv)
 
         {
             nvrhi::ComputePipelineDesc pipelineDesc;
-            if (m_api == nvrhi::GraphicsAPI::D3D12) 
+            if (m_api == nvrhi::GraphicsAPI::D3D12)
                 pipelineDesc.bindingLayouts = { m_globalBindingLayout, m_sharcBindingLayout };
             else
                 pipelineDesc.bindingLayouts = { m_globalBindingLayout, m_dummyLayouts[1], m_dummyLayouts[2], m_sharcBindingLayout };
@@ -353,7 +348,7 @@ bool Pathtracer::Init(int argc, const char* const* argv)
     }
 #endif // ENABLE_SHARC
 
-#if ENABLE_DENOISER
+#if ENABLE_NRD
     std::vector<ShaderMacro> denoiseMacros = { ShaderMacro("NRD_NORMAL_ENCODING", "2"), ShaderMacro("NRD_ROUGHNESS_ENCODING", "1") };
 
     {
@@ -384,7 +379,7 @@ bool Pathtracer::Init(int argc, const char* const* argv)
         pipelineDesc.CS = m_denoiserResolveCS;
         m_denoiserResolvePSO = GetDevice()->createComputePipeline(pipelineDesc);
     }
-#endif // ENABLE_DENOISER
+#endif // ENABLE_NRD
 
     // Create the tonemapping pass
     {
@@ -412,27 +407,27 @@ bool Pathtracer::CreateRayTracingPipelines()
     for (uint i = 0; i < PipelineType::Count; ++i)
         m_pipelineMacros[i].clear();
 
-    // Select the current macros
-#if ENABLE_DENOISER
-    char const* enableDenoiserStr = m_ui.enableDenoiser ? "1" : "0";
-#else // !ENABLE_DENOISER
+        // Select the current macros
+#if ENABLE_NRD
+    char const* enableDenoiserStr = (m_ui.denoiserSelection == DenoiserSelection::Nrd) ? "1" : "0";
+#else // !ENABLE_NRD
     char const* enableDenoiserStr = "0";
-#endif // !ENABLE_DENOISER
+#endif // !ENABLE_NRD
 
     m_pipelineMacros[PipelineType::DefaultPathTracing].push_back(ShaderMacro("REFERENCE", "1"));
-    m_pipelineMacros[PipelineType::DefaultPathTracing].push_back(ShaderMacro("ENABLE_DENOISER", enableDenoiserStr));
+    m_pipelineMacros[PipelineType::DefaultPathTracing].push_back(ShaderMacro("ENABLE_NRD", enableDenoiserStr));
 
 #if ENABLE_NRC
     m_pipelineMacros[PipelineType::NRC_Update].push_back(ShaderMacro("NRC_UPDATE", "1"));
     m_pipelineMacros[PipelineType::NRC_Query].push_back(ShaderMacro("NRC_QUERY", "1"));
-    m_pipelineMacros[PipelineType::NRC_Query].push_back(ShaderMacro("ENABLE_DENOISER", enableDenoiserStr));
+    m_pipelineMacros[PipelineType::NRC_Query].push_back(ShaderMacro("ENABLE_NRD", enableDenoiserStr));
 #endif // ENABLE_NRC
 
 #if ENABLE_SHARC
     m_pipelineMacros[PipelineType::Sharc_Update].push_back(ShaderMacro("SHARC_UPDATE", "1"));
 
     m_pipelineMacros[PipelineType::Sharc_Query].push_back(ShaderMacro("SHARC_QUERY", "1"));
-    m_pipelineMacros[PipelineType::Sharc_Query].push_back(ShaderMacro("ENABLE_DENOISER", enableDenoiserStr));
+    m_pipelineMacros[PipelineType::Sharc_Query].push_back(ShaderMacro("ENABLE_NRD", enableDenoiserStr));
 #endif // ENABLE_SHARC
 
     // Create the RT pipelines
@@ -498,9 +493,8 @@ void Pathtracer::SceneLoaded()
         else
         {
             std::string cameraName = "DefaultCamera";
-            auto it = std::find_if(cameras.begin(), cameras.end(), [cameraName](std::shared_ptr<donut::engine::SceneCamera> const& camera) {
-                return camera->GetName() == cameraName;
-                });
+            auto it =
+                std::find_if(cameras.begin(), cameras.end(), [cameraName](std::shared_ptr<donut::engine::SceneCamera> const& camera) { return camera->GetName() == cameraName; });
             it != cameras.end() ? m_ui.activeSceneCamera = *it : m_ui.activeSceneCamera = cameras[0];
         }
 
@@ -526,7 +520,6 @@ void Pathtracer::SceneLoaded()
     m_sunLight->angularSize = 0.8f;
     m_sunLight->irradiance = 20.f;
     m_sunLight->SetDirection(dm::double3(-0.049f, -0.87f, 0.48f));
-
 }
 
 void Pathtracer::SceneUnloading()
@@ -656,49 +649,47 @@ bool Pathtracer::CreateRayTracingPipeline(engine::ShaderFactory& shaderFactory, 
 
     pipelinePermutation.shaderLibrary = shaderLibrary;
 
-    auto macroDefined = [pipelineMacros](std::string inputToken)
-    {
-        auto it = std::find_if(pipelineMacros.begin(), pipelineMacros.end(), [&inputToken](const engine::ShaderMacro& macro) {return (macro.name.find(inputToken) != std::string::npos);/*return macro.name == inputToken;*/ });
+    auto macroDefined = [pipelineMacros](std::string inputToken) {
+        auto it = std::find_if(pipelineMacros.begin(), pipelineMacros.end(), [&inputToken](const engine::ShaderMacro& macro) {
+            return (macro.name.find(inputToken) != std::string::npos); /*return macro.name == inputToken;*/
+        });
         if (it != pipelineMacros.end())
             return it->definition == "1";
+
         return false;
     };
 
     nvrhi::rt::PipelineDesc pipelineDesc;
-    for (int i = 0; i < DescriptorSetIDs::COUNT; ++i) 
+    for (int i = 0; i < DescriptorSetIDs::COUNT; ++i)
         pipelineDesc.globalBindingLayouts.push_back(m_dummyLayouts[i]);
+
     pipelineDesc.globalBindingLayouts[DescriptorSetIDs::Globals] = m_globalBindingLayout;
     pipelineDesc.globalBindingLayouts[DescriptorSetIDs::Bindless] = m_bindlessLayout;
 
-    pipelineDesc.shaders = {
-        { "", shaderLibrary->getShader("RayGen", nvrhi::ShaderType::RayGeneration), nullptr },
-        { "", shaderLibrary->getShader("Miss", nvrhi::ShaderType::Miss), nullptr },
-        { "", shaderLibrary->getShader("ShadowMiss", nvrhi::ShaderType::Miss), nullptr }
-    };
+    pipelineDesc.shaders = { { "", shaderLibrary->getShader("RayGen", nvrhi::ShaderType::RayGeneration), nullptr },
+                             { "", shaderLibrary->getShader("Miss", nvrhi::ShaderType::Miss), nullptr },
+                             { "", shaderLibrary->getShader("ShadowMiss", nvrhi::ShaderType::Miss), nullptr } };
 
     pipelineDesc.hitGroups = { {
-        "HitGroup",
-        shaderLibrary->getShader("ClosestHit", nvrhi::ShaderType::ClosestHit),
-        shaderLibrary->getShader("AnyHit", nvrhi::ShaderType::AnyHit),
-        nullptr, // intersectionShader
-        nullptr, // bindingLayout
-        false  // isProceduralPrimitive
-    },
-    {
-        "HitGroupShadow",
-        shaderLibrary->getShader("ClosestHitShadow", nvrhi::ShaderType::ClosestHit),
-        shaderLibrary->getShader("AnyHitShadow", nvrhi::ShaderType::AnyHit),
-        nullptr, // intersectionShader
-        nullptr, // bindingLayout
-        false  // isProceduralPrimitive
-    } };
+                                   "HitGroup", shaderLibrary->getShader("ClosestHit", nvrhi::ShaderType::ClosestHit), shaderLibrary->getShader("AnyHit", nvrhi::ShaderType::AnyHit),
+                                   nullptr, // intersectionShader
+                                   nullptr, // bindingLayout
+                                   false // isProceduralPrimitive
+                               },
+                               {
+                                   "HitGroupShadow", shaderLibrary->getShader("ClosestHitShadow", nvrhi::ShaderType::ClosestHit),
+                                   shaderLibrary->getShader("AnyHitShadow", nvrhi::ShaderType::AnyHit),
+                                   nullptr, // intersectionShader
+                                   nullptr, // bindingLayout
+                                   false // isProceduralPrimitive
+                               } };
 
     pipelineDesc.maxPayloadSize = sizeof(float) * 6;
 
-#if ENABLE_DENOISER
-    if (macroDefined("ENABLE_DENOISER"))
+#if ENABLE_NRD
+    if (macroDefined("ENABLE_NRD"))
         pipelineDesc.globalBindingLayouts[DescriptorSetIDs::Denoiser] = m_denoiserBindingLayout;
-#endif // ENABLE_DENOISER
+#endif // ENABLE_NRD
 
 #if ENABLE_NRC
     if (macroDefined("NRC_"))
@@ -736,14 +727,13 @@ void Pathtracer::GetMeshBlasDesc(engine::MeshInfo& mesh, nvrhi::rt::AccelStructD
         triangles.indexFormat = nvrhi::Format::R32_UINT;
         triangles.indexCount = geometry->numIndices;
         triangles.vertexBuffer = mesh.buffers->vertexBuffer;
-        triangles.vertexOffset = (mesh.vertexOffset + geometry->vertexOffsetInMesh) * sizeof(float3) + mesh.buffers->getVertexBufferRange(engine::VertexAttribute::Position).byteOffset;
+        triangles.vertexOffset =
+            (mesh.vertexOffset + geometry->vertexOffsetInMesh) * sizeof(float3) + mesh.buffers->getVertexBufferRange(engine::VertexAttribute::Position).byteOffset;
         triangles.vertexFormat = nvrhi::Format::RGB32_FLOAT;
         triangles.vertexStride = sizeof(float3);
         triangles.vertexCount = geometry->numVertices;
         geometryDesc.geometryType = nvrhi::rt::GeometryType::Triangles;
-        geometryDesc.flags = (geometry->material->domain != engine::MaterialDomain::Opaque)
-            ? nvrhi::rt::GeometryFlags::None
-            : nvrhi::rt::GeometryFlags::Opaque;
+        geometryDesc.flags = (geometry->material->domain != engine::MaterialDomain::Opaque) ? nvrhi::rt::GeometryFlags::None : nvrhi::rt::GeometryFlags::Opaque;
 
         blasDesc.bottomLevelGeometries.push_back(geometryDesc);
     }
@@ -830,12 +820,12 @@ void Pathtracer::BackBufferResizing()
 
     m_pathTracerOutputBuffer = nullptr;
 
-#if ENABLE_DENOISER
+#if ENABLE_NRD
     m_renderTargets = nullptr;
     m_nrd = nullptr;
     m_denoiserBindingSet = nullptr;
     m_denoiserOutBindingSet = nullptr;
-#endif // ENABLE_DENOISER
+#endif // ENABLE_NRD
 }
 
 void Pathtracer::Render(nvrhi::IFramebuffer* framebuffer)
@@ -914,6 +904,15 @@ void Pathtracer::Render(nvrhi::IFramebuffer* framebuffer)
     m_view.FillPlanarViewConstants(constants.view);
     m_viewPrevious.FillPlanarViewConstants(constants.viewPrev);
 
+    static PlanarViewConstants updatePassView = constants.view;
+
+#if ENABLE_SHARC
+    if (m_ui.sharcUpdateViewCamera || m_ui.techSelection != TechSelection::Sharc)
+        updatePassView = constants.view;
+#endif // ENABLE_SHARC
+
+    constants.updatePassView = updatePassView;
+
     m_sunLight->FillLightConstants(constants.sunLight);
 
     // Add all lights
@@ -926,7 +925,7 @@ void Pathtracer::Render(nvrhi::IFramebuffer* framebuffer)
 
 #if ENABLE_NRC
     // Update NRC
-    if (m_ui.enableNrc)
+    if (m_ui.techSelection == TechSelection::Nrc)
     {
         // Check settings that would require NRC to be re-configured
         nrc::ContextSettings nrcContextSettings;
@@ -935,16 +934,17 @@ void Pathtracer::Render(nvrhi::IFramebuffer* framebuffer)
 
         int32_t frameWidth, frameHeight;
         GetDeviceManager()->GetWindowDimensions(frameWidth, frameHeight);
-        nrcContextSettings.frameDimensions = { (uint32_t) frameWidth, (uint32_t) frameHeight };
+        nrcContextSettings.frameDimensions = { (uint32_t)frameWidth, (uint32_t)frameHeight };
 
-        nrcContextSettings.trainingDimensions = nrc::computeIdealTrainingDimensions(nrcContextSettings.frameDimensions);
-        nrcContextSettings.maxPathVertices = m_ui.bouncesMax;
+        nrcContextSettings.trainingDimensions = nrc::ComputeIdealTrainingDimensions(nrcContextSettings.frameDimensions, 0);
+        nrcContextSettings.maxPathVertices = m_ui.nrcMaxTrainingBounces;
         nrcContextSettings.samplesPerPixel = m_ui.samplesPerPixel;
-        
+
         dm::box3 aabb = m_scene->GetSceneGraph()->GetRootNode()->GetGlobalBoundingBox();
         nrcContextSettings.sceneBoundsMin = { aabb.m_mins[0], aabb.m_mins[1], aabb.m_mins[2] };
         nrcContextSettings.sceneBoundsMax = { aabb.m_maxs[0], aabb.m_maxs[1], aabb.m_maxs[2] };
-        //nrcContextSettings.collectAccurateLoss = false;
+        nrcContextSettings.smallestResolvableFeatureSize = 0.01f;
+        // nrcContextSettings.collectAccurateLoss = false;
 
         if (nrcContextSettings != m_nrcContextSettings)
         {
@@ -970,15 +970,27 @@ void Pathtracer::Render(nvrhi::IFramebuffer* framebuffer)
         nrcPerFrameSettings.maxExpectedAverageRadianceValue = m_ui.nrcMaxAverageRadiance;
         nrcPerFrameSettings.terminationHeuristicThreshold = m_ui.nrcTerminationHeuristicThreshold;
         nrcPerFrameSettings.trainingTerminationHeuristicThreshold = m_ui.nrcTerminationHeuristicThreshold;
+        nrcPerFrameSettings.numTrainingIterations = m_ui.nrcNumTrainingIterations;
         nrcPerFrameSettings.resolveMode = m_ui.nrcResolveMode;
+        nrcPerFrameSettings.trainTheCache = m_ui.nrcTrainCache;
+        nrcPerFrameSettings.proportionPrimarySegmentsToTrainOn = m_ui.nrcProportionPrimarySegmentsToTrainOn;
+        nrcPerFrameSettings.proportionTertiaryPlusSegmentsToTrainOn = m_ui.nrcProportionTertiaryPlusSegmentsToTrainOn;
+        nrcPerFrameSettings.proportionUnbiasedToSelfTrain = m_ui.nrcProportionUnbiasedToSelfTrain;
+        nrcPerFrameSettings.proportionUnbiased = m_ui.nrcProportionUnbiased;
+        nrcPerFrameSettings.selfTrainingAttenuation = m_ui.nrcSelfTrainingAttenuation;
+        nrcPerFrameSettings.usedTrainingDimensions = nrc::ComputeIdealTrainingDimensions(nrcContextSettings.frameDimensions, nrcPerFrameSettings.numTrainingIterations);
+        m_nrcUsedTrainingWidth = nrcPerFrameSettings.usedTrainingDimensions.x;
+        m_nrcUsedTrainingHeight = nrcPerFrameSettings.usedTrainingDimensions.y;
 
         m_nrc->BeginFrame(m_commandList, nrcPerFrameSettings);
         m_nrc->PopulateShaderConstants(constants.nrcConstants);
     }
 #endif
 
+    constants.sharcRoughnessThreshold = 0.0f;
+
 #if ENABLE_SHARC
-    if (m_ui.enableSharc)
+    if (m_ui.techSelection == TechSelection::Sharc)
     {
         static float3 sharcCameraPosition = m_view.GetViewOrigin();
         static float3 sharcCameraPositionPrev = m_view.GetViewOrigin();
@@ -991,8 +1003,9 @@ void Pathtracer::Render(nvrhi::IFramebuffer* framebuffer)
         constants.sharcCameraPosition.xyz() = sharcCameraPosition;
         constants.sharcAccumulationFrameNum = m_ui.sharcAccumulationFrameNum;
         constants.sharcStaleFrameNum = m_ui.sharcStaleFrameFrameNum;
+        constants.sharcEnableAntifirefly = m_ui.sharcEnableAntiFireflyFilter;
 
-        if (m_ui.sharcEnableUpdate)
+        if (m_ui.sharcEnableUpdate && m_ui.sharcUpdateViewCamera)
         {
             sharcCameraPositionPrev = sharcCameraPosition;
             sharcCameraPosition = m_view.GetViewOrigin();
@@ -1000,14 +1013,14 @@ void Pathtracer::Render(nvrhi::IFramebuffer* framebuffer)
     }
 #endif // ENABLE_SHARC
 
-    static bool enableDenoiser = false;
+    static bool enableNrd = false;
     bool skipDenoiser = m_ui.ptDebugOutput != PTDebugOutputType::None;
-#if ENABLE_DENOISER
-    bool resetDenoiser = enableDenoiser != m_ui.enableDenoiser;
+#if ENABLE_NRD
+    bool resetDenoiser = enableNrd != (m_ui.denoiserSelection == DenoiserSelection::Nrd);
     if (resetDenoiser && !skipDenoiser)
         CreateRayTracingPipelines();
 
-    if (m_ui.enableDenoiser && !m_nrd)
+    if ((m_ui.denoiserSelection == DenoiserSelection::Nrd) && !m_nrd)
     {
         // Create all the resources for the denoiser
         assert(!m_renderTargets && !m_denoiserBindingSet && !m_denoiserOutBindingSet);
@@ -1050,19 +1063,19 @@ void Pathtracer::Render(nvrhi::IFramebuffer* framebuffer)
 
         m_denoiserOutBindingSet = device->createBindingSet(bindingSetDesc, m_denoiserBindingLayout);
     }
-    enableDenoiser = m_ui.enableDenoiser && !skipDenoiser;
-#endif // ENABLE_DENOISER
+    enableNrd = (m_ui.denoiserSelection == DenoiserSelection::Nrd) && !skipDenoiser;
+#endif // ENABLE_NRD
 
     m_commandList->writeBuffer(m_constantBuffer, &constants, sizeof(constants));
 
     GlobalConstants globalConstants = {};
-    globalConstants.enableJitter = (m_ui.enableJitter && !enableDenoiser) || (m_ui.enableJitter && enableDenoiser && m_ui.enableAccumulation);
+    globalConstants.enableJitter = m_ui.enableJitter && !enableNrd;
     globalConstants.enableBackFaceCull = m_ui.enableBackFaceCull;
     globalConstants.bouncesMax = m_ui.bouncesMax;
     globalConstants.frameIndex = m_frameIndex++;
-    globalConstants.enableAccumulation = m_ui.enableAccumulation;
+    globalConstants.enableAccumulation = (m_ui.denoiserSelection == DenoiserSelection::Accumulation);
     globalConstants.accumulatedFramesMax = m_resetAccumulation ? 1 : m_ui.accumulatedFramesMax;
-    globalConstants.recipAccumulatedFrames = m_ui.enableAccumulation ? (1.0f / (float) m_accumulatedFrameCount) : 1.0f;
+    globalConstants.recipAccumulatedFrames = (m_ui.denoiserSelection == DenoiserSelection::Accumulation) ? (1.0f / (float)m_accumulatedFrameCount) : 1.0f;
     globalConstants.intensityScale = 1.0f;
     globalConstants.enableEmissives = m_ui.enableEmissives;
     globalConstants.enableLighting = m_ui.enableLighting;
@@ -1094,39 +1107,40 @@ void Pathtracer::Render(nvrhi::IFramebuffer* framebuffer)
     globalConstants.sharcDebug = m_ui.sharcEnableDebug;
 #endif // ENABLE_SHARC
 
-#if ENABLE_DENOISER
-    if (enableDenoiser)
+#if ENABLE_NRD
+    if (enableNrd)
     {
         globalConstants.samplesPerPixel = m_ui.samplesPerPixel;
 
         nrd::HitDistanceParameters hitDistanceParameters;
         globalConstants.nrdHitDistanceParams = (float4&)hitDistanceParameters;
     }
-#endif // ENABLE_DENOISER
+#endif // ENABLE_NRD
 
     m_commandList->writeBuffer(m_debugBuffer, &globalConstants, sizeof(globalConstants));
     m_commandList->clearState();
 
     nvrhi::rt::State state;
-    for (int i = 0; i < DescriptorSetIDs::COUNT; ++i) 
+    for (int i = 0; i < DescriptorSetIDs::COUNT; ++i)
         state.bindings.push_back(m_dummyBindingSets[i]); // Unified Binding
-    state.bindings[DescriptorSetIDs::Globals]  = m_globalBindingSet;
+
+    state.bindings[DescriptorSetIDs::Globals] = m_globalBindingSet;
     state.bindings[DescriptorSetIDs::Bindless] = (m_descriptorTable->GetDescriptorTable());
 
-#if ENABLE_DENOISER
-    if (enableDenoiser)
+#if ENABLE_NRD
+    if (enableNrd)
     {
         assert(m_denoiserBindingSet);
         state.bindings[DescriptorSetIDs::Denoiser] = m_denoiserBindingSet;
 
         m_commandList->clearTextureFloat(m_renderTargets->denoiserViewSpaceZ, nvrhi::AllSubresources, nvrhi::Color(0.0f));
     }
-#endif // ENABLE_DENOISER
+#endif // ENABLE_NRD
 
     bool runReferencePathTracer = true;
-#if ENABLE_NRC
 
-    if (m_ui.enableNrc)
+#if ENABLE_NRC
+    if (m_ui.techSelection == TechSelection::Nrc)
     {
         ScopedMarker scopedMarker(m_commandList, "Nrc");
 
@@ -1136,12 +1150,13 @@ void Pathtracer::Render(nvrhi::IFramebuffer* framebuffer)
         state.bindings[DescriptorSetIDs::Nrc] = m_nrcBindingSet;
         {
             nvrhi::rt::DispatchRaysArguments args;
-            ScopedMarker scopedMarker(m_commandList, "NrcUpdateAndQueryRT");
+            // ScopedMarker scopedMarker(m_commandList, "NrcUpdateAndQueryRT");
 
-            // NRC query
-            if (m_denoiserBindingSet && enableDenoiser)
+            // NRC query pathtracing pass
+            ScopedMarker scopedMarker(m_commandList, "NrcQueryPathtracingPass");
+            if (m_denoiserBindingSet && enableNrd)
                 state.bindings[DescriptorSetIDs::Denoiser] = m_denoiserBindingSet;
-            
+
             state.shaderTable = m_pipelinePermutations[PipelineType::NRC_Query].shaderTable;
             m_commandList->setRayTracingState(state);
             args.width = fbInfo.width;
@@ -1153,21 +1168,23 @@ void Pathtracer::Render(nvrhi::IFramebuffer* framebuffer)
             // Fortunately, we can tell it that we know better.
             m_commandList->setEnableAutomaticBarriers(false);
 
-            // NRC update
+            // NRC update pathtracing pass
             if (m_ui.nrcTrainCache)
             {
+                ScopedMarker scopedMarker(m_commandList, "NrcUpdatePathtracingPass");
+
                 state.bindings[DescriptorSetIDs::Denoiser] = m_dummyBindingSets[DescriptorSetIDs::Denoiser];
                 state.shaderTable = m_pipelinePermutations[PipelineType::NRC_Update].shaderTable;
                 m_commandList->setRayTracingState(state);
-                args.width = m_nrcContextSettings.trainingDimensions.x;
-                args.height = m_nrcContextSettings.trainingDimensions.y;
+                args.width = m_nrcUsedTrainingWidth;
+                args.height = m_nrcUsedTrainingHeight;
                 m_commandList->dispatchRays(args);
                 m_commandList->setEnableAutomaticBarriers(true);
             }
         }
 
         {
-            ScopedMarker scopedMarker(m_commandList, "NrcQueryAndTrain");
+            ScopedMarker scopedMarker(m_commandList, "NrcQueryPropagateTrain");
             m_nrc->QueryAndTrain(m_commandList, m_ui.nrcCalculateTrainingLoss);
         }
 
@@ -1183,7 +1200,7 @@ void Pathtracer::Render(nvrhi::IFramebuffer* framebuffer)
 #endif // ENABLE_NRC
 
 #if ENABLE_SHARC
-    if (m_ui.enableSharc)
+    if (m_ui.techSelection == TechSelection::Sharc)
     {
         ScopedMarker scopedMarker(m_commandList, "Sharc");
 
@@ -1261,8 +1278,8 @@ void Pathtracer::Render(nvrhi::IFramebuffer* framebuffer)
         }
 
         // Unified Binding
-        if (m_denoiserBindingSet && enableDenoiser)
-            state.bindings[DescriptorSetIDs::Denoiser]= m_denoiserBindingSet;
+        if (m_denoiserBindingSet && enableNrd)
+            state.bindings[DescriptorSetIDs::Denoiser] = m_denoiserBindingSet;
 
         // SHARC query
         {
@@ -1290,14 +1307,14 @@ void Pathtracer::Render(nvrhi::IFramebuffer* framebuffer)
         m_commandList->dispatchRays(args);
     }
 
-#if ENABLE_DENOISER
-    if (enableDenoiser)
+#if ENABLE_NRD
+    if (enableNrd)
     {
         // Denoiser data packing
         {
             nvrhi::ComputeState computeState;
             computeState.bindings = { m_globalBindingSet, m_denoiserBindingSet };
-            computeState.pipeline = m_ui.enableNrc ? m_denoiserReblurPack_NRC_PSO : m_denoiserReblurPackPSO;
+            computeState.pipeline = (m_ui.techSelection == TechSelection::Nrc) ? m_denoiserReblurPack_NRC_PSO : m_denoiserReblurPackPSO;
             m_commandList->setComputeState(computeState);
 
             const uint groupSize = 16;
@@ -1320,7 +1337,7 @@ void Pathtracer::Render(nvrhi::IFramebuffer* framebuffer)
             m_commandList->dispatch(dispatchSize.x, dispatchSize.y);
         }
     }
-#endif // ENABLE_DENOISER
+#endif // ENABLE_NRD
 
     // Accumulation and tonemapping
     {
@@ -1353,11 +1370,8 @@ void Pathtracer::Render(nvrhi::IFramebuffer* framebuffer)
         }
 
         nvrhi::BindingSetDesc bindingSetDesc;
-        bindingSetDesc.bindings = {
-            nvrhi::BindingSetItem::ConstantBuffer(0, m_debugBuffer),
-            nvrhi::BindingSetItem::Texture_UAV(0, m_pathTracerOutputBuffer),
-            nvrhi::BindingSetItem::Texture_UAV(1, m_accumulationBuffer)
-        };
+        bindingSetDesc.bindings = { nvrhi::BindingSetItem::ConstantBuffer(0, m_debugBuffer), nvrhi::BindingSetItem::Texture_UAV(0, m_pathTracerOutputBuffer),
+                                    nvrhi::BindingSetItem::Texture_UAV(1, m_accumulationBuffer) };
 
         m_tonemappingBindingSet = device->createBindingSet(bindingSetDesc, m_tonemappingBindingLayout);
 
@@ -1382,7 +1396,7 @@ void Pathtracer::Render(nvrhi::IFramebuffer* framebuffer)
     m_sceneReloaded = false;
 
 #if ENABLE_NRC
-    if (m_ui.enableNrc)
+    if (m_ui.techSelection == TechSelection::Nrc)
     {
         if (m_api == nvrhi::GraphicsAPI::D3D12)
             m_nrc->EndFrame(device->getNativeQueue(nvrhi::ObjectTypes::D3D12_CommandQueue, nvrhi::CommandQueue::Graphics));

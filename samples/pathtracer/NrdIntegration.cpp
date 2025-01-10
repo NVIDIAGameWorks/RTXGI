@@ -1,12 +1,12 @@
 /*
-* Copyright (c) 2024, NVIDIA CORPORATION.  All rights reserved.
-*
-* NVIDIA CORPORATION and its licensors retain all intellectual property
-* and proprietary rights in and to this software, related documentation
-* and any modifications thereto.  Any use, reproduction, disclosure or
-* distribution of this software and related documentation without an express
-* license agreement from NVIDIA CORPORATION is strictly prohibited.
-*/
+ * Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * NVIDIA CORPORATION and its licensors retain all intellectual property
+ * and proprietary rights in and to this software, related documentation
+ * and any modifications thereto.  Any use, reproduction, disclosure or
+ * distribution of this software and related documentation without an express
+ * license agreement from NVIDIA CORPORATION is strictly prohibited.
+ */
 
 #include "NrdIntegration.h"
 
@@ -24,61 +24,101 @@ static nvrhi::Format GetNvrhiFormat(nrd::Format format)
 {
     switch (format)
     {
-    case nrd::Format::R8_UNORM:             return nvrhi::Format::R8_UNORM;
-    case nrd::Format::R8_SNORM:             return nvrhi::Format::R8_SNORM;
-    case nrd::Format::R8_UINT:              return nvrhi::Format::R8_UINT;
-    case nrd::Format::R8_SINT:              return nvrhi::Format::R8_SINT;
-    case nrd::Format::RG8_UNORM:            return nvrhi::Format::RG8_UNORM;
-    case nrd::Format::RG8_SNORM:            return nvrhi::Format::RG8_SNORM;
-    case nrd::Format::RG8_UINT:             return nvrhi::Format::RG8_UINT;
-    case nrd::Format::RG8_SINT:             return nvrhi::Format::RG8_SINT;
-    case nrd::Format::RGBA8_UNORM:          return nvrhi::Format::RGBA8_UNORM;
-    case nrd::Format::RGBA8_SNORM:          return nvrhi::Format::RGBA8_SNORM;
-    case nrd::Format::RGBA8_UINT:           return nvrhi::Format::RGBA8_UINT;
-    case nrd::Format::RGBA8_SINT:           return nvrhi::Format::RGBA8_SINT;
-    case nrd::Format::RGBA8_SRGB:           return nvrhi::Format::SRGBA8_UNORM;
-    case nrd::Format::R16_UNORM:            return nvrhi::Format::R16_UNORM;
-    case nrd::Format::R16_SNORM:            return nvrhi::Format::R16_SNORM;
-    case nrd::Format::R16_UINT:             return nvrhi::Format::R16_UINT;
-    case nrd::Format::R16_SINT:             return nvrhi::Format::R16_SINT;
-    case nrd::Format::R16_SFLOAT:           return nvrhi::Format::R16_FLOAT;
-    case nrd::Format::RG16_UNORM:           return nvrhi::Format::RG16_UNORM;
-    case nrd::Format::RG16_SNORM:           return nvrhi::Format::RG16_SNORM;
-    case nrd::Format::RG16_UINT:            return nvrhi::Format::RG16_UINT;
-    case nrd::Format::RG16_SINT:            return nvrhi::Format::RG16_SINT;
-    case nrd::Format::RG16_SFLOAT:          return nvrhi::Format::RG16_FLOAT;
-    case nrd::Format::RGBA16_UNORM:         return nvrhi::Format::RGBA16_UNORM;
-    case nrd::Format::RGBA16_SNORM:         return nvrhi::Format::RGBA16_SNORM;
-    case nrd::Format::RGBA16_UINT:          return nvrhi::Format::RGBA16_UINT;
-    case nrd::Format::RGBA16_SINT:          return nvrhi::Format::RGBA16_SINT;
-    case nrd::Format::RGBA16_SFLOAT:        return nvrhi::Format::RGBA16_FLOAT;
-    case nrd::Format::R32_UINT:             return nvrhi::Format::R32_UINT;
-    case nrd::Format::R32_SINT:             return nvrhi::Format::R32_SINT;
-    case nrd::Format::R32_SFLOAT:           return nvrhi::Format::R32_FLOAT;
-    case nrd::Format::RG32_UINT:            return nvrhi::Format::RG32_UINT;
-    case nrd::Format::RG32_SINT:            return nvrhi::Format::RG32_SINT;
-    case nrd::Format::RG32_SFLOAT:          return nvrhi::Format::RG32_FLOAT;
-    case nrd::Format::RGB32_UINT:           return nvrhi::Format::RGB32_UINT;
-    case nrd::Format::RGB32_SINT:           return nvrhi::Format::RGB32_SINT;
-    case nrd::Format::RGB32_SFLOAT:         return nvrhi::Format::RGB32_FLOAT;
-    case nrd::Format::RGBA32_UINT:          return nvrhi::Format::RGBA32_UINT;
-    case nrd::Format::RGBA32_SINT:          return nvrhi::Format::RGBA32_SINT;
-    case nrd::Format::RGBA32_SFLOAT:        return nvrhi::Format::RGBA32_FLOAT;
-    case nrd::Format::R10_G10_B10_A2_UNORM: return nvrhi::Format::R10G10B10A2_UNORM;
-    case nrd::Format::R10_G10_B10_A2_UINT:  return nvrhi::Format::UNKNOWN; // not representable and not used
-    case nrd::Format::R11_G11_B10_UFLOAT:   return nvrhi::Format::R11G11B10_FLOAT;
-    case nrd::Format::R9_G9_B9_E5_UFLOAT:   return nvrhi::Format::UNKNOWN; // not representable and not used
-    default:                                return nvrhi::Format::UNKNOWN;
+    case nrd::Format::R8_UNORM:
+        return nvrhi::Format::R8_UNORM;
+    case nrd::Format::R8_SNORM:
+        return nvrhi::Format::R8_SNORM;
+    case nrd::Format::R8_UINT:
+        return nvrhi::Format::R8_UINT;
+    case nrd::Format::R8_SINT:
+        return nvrhi::Format::R8_SINT;
+    case nrd::Format::RG8_UNORM:
+        return nvrhi::Format::RG8_UNORM;
+    case nrd::Format::RG8_SNORM:
+        return nvrhi::Format::RG8_SNORM;
+    case nrd::Format::RG8_UINT:
+        return nvrhi::Format::RG8_UINT;
+    case nrd::Format::RG8_SINT:
+        return nvrhi::Format::RG8_SINT;
+    case nrd::Format::RGBA8_UNORM:
+        return nvrhi::Format::RGBA8_UNORM;
+    case nrd::Format::RGBA8_SNORM:
+        return nvrhi::Format::RGBA8_SNORM;
+    case nrd::Format::RGBA8_UINT:
+        return nvrhi::Format::RGBA8_UINT;
+    case nrd::Format::RGBA8_SINT:
+        return nvrhi::Format::RGBA8_SINT;
+    case nrd::Format::RGBA8_SRGB:
+        return nvrhi::Format::SRGBA8_UNORM;
+    case nrd::Format::R16_UNORM:
+        return nvrhi::Format::R16_UNORM;
+    case nrd::Format::R16_SNORM:
+        return nvrhi::Format::R16_SNORM;
+    case nrd::Format::R16_UINT:
+        return nvrhi::Format::R16_UINT;
+    case nrd::Format::R16_SINT:
+        return nvrhi::Format::R16_SINT;
+    case nrd::Format::R16_SFLOAT:
+        return nvrhi::Format::R16_FLOAT;
+    case nrd::Format::RG16_UNORM:
+        return nvrhi::Format::RG16_UNORM;
+    case nrd::Format::RG16_SNORM:
+        return nvrhi::Format::RG16_SNORM;
+    case nrd::Format::RG16_UINT:
+        return nvrhi::Format::RG16_UINT;
+    case nrd::Format::RG16_SINT:
+        return nvrhi::Format::RG16_SINT;
+    case nrd::Format::RG16_SFLOAT:
+        return nvrhi::Format::RG16_FLOAT;
+    case nrd::Format::RGBA16_UNORM:
+        return nvrhi::Format::RGBA16_UNORM;
+    case nrd::Format::RGBA16_SNORM:
+        return nvrhi::Format::RGBA16_SNORM;
+    case nrd::Format::RGBA16_UINT:
+        return nvrhi::Format::RGBA16_UINT;
+    case nrd::Format::RGBA16_SINT:
+        return nvrhi::Format::RGBA16_SINT;
+    case nrd::Format::RGBA16_SFLOAT:
+        return nvrhi::Format::RGBA16_FLOAT;
+    case nrd::Format::R32_UINT:
+        return nvrhi::Format::R32_UINT;
+    case nrd::Format::R32_SINT:
+        return nvrhi::Format::R32_SINT;
+    case nrd::Format::R32_SFLOAT:
+        return nvrhi::Format::R32_FLOAT;
+    case nrd::Format::RG32_UINT:
+        return nvrhi::Format::RG32_UINT;
+    case nrd::Format::RG32_SINT:
+        return nvrhi::Format::RG32_SINT;
+    case nrd::Format::RG32_SFLOAT:
+        return nvrhi::Format::RG32_FLOAT;
+    case nrd::Format::RGB32_UINT:
+        return nvrhi::Format::RGB32_UINT;
+    case nrd::Format::RGB32_SINT:
+        return nvrhi::Format::RGB32_SINT;
+    case nrd::Format::RGB32_SFLOAT:
+        return nvrhi::Format::RGB32_FLOAT;
+    case nrd::Format::RGBA32_UINT:
+        return nvrhi::Format::RGBA32_UINT;
+    case nrd::Format::RGBA32_SINT:
+        return nvrhi::Format::RGBA32_SINT;
+    case nrd::Format::RGBA32_SFLOAT:
+        return nvrhi::Format::RGBA32_FLOAT;
+    case nrd::Format::R10_G10_B10_A2_UNORM:
+        return nvrhi::Format::R10G10B10A2_UNORM;
+    case nrd::Format::R10_G10_B10_A2_UINT:
+        return nvrhi::Format::UNKNOWN; // not representable and not used
+    case nrd::Format::R11_G11_B10_UFLOAT:
+        return nvrhi::Format::R11G11B10_FLOAT;
+    case nrd::Format::R9_G9_B9_E5_UFLOAT:
+        return nvrhi::Format::UNKNOWN; // not representable and not used
+    default:
+        return nvrhi::Format::UNKNOWN;
     }
 }
 
 NrdIntegration::NrdIntegration(nvrhi::IDevice* device, nrd::Denoiser denoiser)
-    : m_device(device)
-    , m_initialized(false)
-    , m_instance(nullptr)
-    , m_denoiser(denoiser)
-    , m_bindingCache(device)
-    , m_identifier(0)
+    : m_device(device), m_initialized(false), m_instance(nullptr), m_denoiser(denoiser), m_bindingCache(device), m_identifier(0)
 {
 }
 
@@ -92,10 +132,7 @@ bool NrdIntegration::Initialize(uint32_t width, uint32_t height, donut::engine::
 {
     const nrd::LibraryDesc& libraryDesc = nrd::GetLibraryDesc();
 
-    const nrd::DenoiserDesc denoiserDescs[] =
-    {
-        { m_identifier, m_denoiser}
-    };
+    const nrd::DenoiserDesc denoiserDescs[] = { { m_identifier, m_denoiser } };
 
     nrd::InstanceCreationDesc instanceCreationDesc = {};
     instanceCreationDesc.denoisers = denoiserDescs;
@@ -107,10 +144,8 @@ bool NrdIntegration::Initialize(uint32_t width, uint32_t height, donut::engine::
 
     const nrd::InstanceDesc& instanceDesc = nrd::GetInstanceDesc(*m_instance);
 
-    const nvrhi::BufferDesc constantBufferDesc = nvrhi::utils::CreateVolatileConstantBufferDesc(
-        instanceDesc.constantBufferMaxDataSize,
-        "NrdConstantBuffer",
-        instanceDesc.descriptorPoolDesc.setsMaxNum * 4);
+    const nvrhi::BufferDesc constantBufferDesc =
+        nvrhi::utils::CreateVolatileConstantBufferDesc(instanceDesc.constantBufferMaxDataSize, "NrdConstantBuffer", instanceDesc.descriptorPoolDesc.setsMaxNum * 4);
 
     m_constantBuffer = m_device->createBuffer(constantBufferDesc);
 
@@ -136,9 +171,7 @@ bool NrdIntegration::Initialize(uint32_t width, uint32_t height, donut::engine::
             break;
         }
 
-        auto samplerDesc = nvrhi::SamplerDesc()
-            .setAllAddressModes(addressMode)
-            .setAllFilters(filter);
+        auto samplerDesc = nvrhi::SamplerDesc().setAllAddressModes(addressMode).setAllFilters(filter);
 
         const nvrhi::SamplerHandle sampler = m_device->createSampler(samplerDesc);
 
@@ -156,7 +189,7 @@ bool NrdIntegration::Initialize(uint32_t width, uint32_t height, donut::engine::
         const nrd::PipelineDesc& nrdPipelineDesc = instanceDesc.pipelines[pipelineIndex];
 
         std::string fileName = std::string("nrd/RayTracingDenoiser/Shaders/Source/") + nrdPipelineDesc.shaderFileName;
-        std::vector<donut::engine::ShaderMacro> macros = { {"NRD_COMPILER_DXC", "1"}, {"NRD_NORMAL_ENCODING", "2"}, {"NRD_ROUGHNESS_ENCODING", "1"} };
+        std::vector<donut::engine::ShaderMacro> macros = { { "NRD_COMPILER_DXC", "1" }, { "NRD_NORMAL_ENCODING", "2" }, { "NRD_ROUGHNESS_ENCODING", "1" } };
 
         NrdPipeline pipeline;
         pipeline.shader = shaderFactory.CreateShader(fileName.c_str(), "main", &macros, nvrhi::ShaderType::Compute);
@@ -178,7 +211,7 @@ bool NrdIntegration::Initialize(uint32_t width, uint32_t height, donut::engine::
         assert(instanceDesc.samplersSpaceIndex == 0);
         for (uint32_t samplerIndex = 0; samplerIndex < instanceDesc.samplersNum; samplerIndex++)
         {
-            //const nrd::StaticSamplerDesc& nrdStaticSampler = denoiserDesc.samplers[samplerIndex];
+            // const nrd::StaticSamplerDesc& nrdStaticSampler = denoiserDesc.samplers[samplerIndex];
 
             nvrhi::BindingLayoutItem samplerItem = {};
             samplerItem.type = nvrhi::ResourceType::Sampler;
@@ -210,12 +243,6 @@ bool NrdIntegration::Initialize(uint32_t width, uint32_t height, donut::engine::
                 layoutDesc.bindings.push_back(resourceItem);
             }
         }
-        //Shaders have been compiled with different offsets than standard
-            layoutDesc.bindingOffsets
-            .setConstantBufferOffset(300)
-            .setSamplerOffset(100)
-            .setShaderResourceOffset(200)
-            .setUnorderedAccessViewOffset(400);
 
         pipeline.bindingLayout = m_device->createBindingLayout(layoutDesc);
 
@@ -245,9 +272,7 @@ bool NrdIntegration::Initialize(uint32_t width, uint32_t height, donut::engine::
     {
         const bool isPermanent = (i < instanceDesc.permanentPoolSize);
 
-        const nrd::TextureDesc& nrdTextureDesc = isPermanent
-            ? instanceDesc.permanentPool[i]
-            : instanceDesc.transientPool[i - instanceDesc.permanentPoolSize];
+        const nrd::TextureDesc& nrdTextureDesc = isPermanent ? instanceDesc.permanentPool[i] : instanceDesc.transientPool[i - instanceDesc.permanentPoolSize];
 
         const nvrhi::Format format = GetNvrhiFormat(nrdTextureDesc.format);
         if (format == nvrhi::Format::UNKNOWN)
@@ -299,26 +324,27 @@ static inline void MatrixToNrd(float* dest, const dm::float4x4& m)
     memcpy(dest, &m, sizeof(m));
 }
 
-void NrdIntegration::RunDenoiserPasses(
-    nvrhi::ICommandList* commandList,
-    const RenderTargets& renderTargets,
-    int pass,
-    const donut::engine::PlanarView& view,
-    const donut::engine::PlanarView& viewPrev,
-    uint32_t frameIndex,
-    float disocclusionThreshold,
-    float disocclusionThresholdAlternate,
-    bool useDisocclusionThresholdAlternateMix,
-    bool enableValidation,
-    const void* methodSettings,
-    bool reset)
+void NrdIntegration::RunDenoiserPasses(nvrhi::ICommandList* commandList,
+                                       const RenderTargets& renderTargets,
+                                       int pass,
+                                       const donut::engine::PlanarView& view,
+                                       const donut::engine::PlanarView& viewPrev,
+                                       uint32_t frameIndex,
+                                       float disocclusionThreshold,
+                                       float disocclusionThresholdAlternate,
+                                       bool useDisocclusionThresholdAlternateMix,
+                                       bool enableValidation,
+                                       const void* methodSettings,
+                                       bool reset)
 {
     if (methodSettings)
         nrd::SetDenoiserSettings(*m_instance, m_identifier, methodSettings);
 
     nrd::CommonSettings commonSettings;
-    MatrixToNrd(commonSettings.worldToViewMatrix, dm::affineToHomogeneous(view.GetViewMatrix()));           //MatrixToNrd(commonSettings.worldToViewRotationMatrix, dm::affineToHomogeneous(view.GetViewMatrix()));
-    MatrixToNrd(commonSettings.worldToViewMatrixPrev, dm::affineToHomogeneous(viewPrev.GetViewMatrix()));   //MatrixToNrd(commonSettings.worldToViewRotationMatrixPrev, dm::affineToHomogeneous(viewPrev.GetViewMatrix()));
+    MatrixToNrd(commonSettings.worldToViewMatrix, dm::affineToHomogeneous(view.GetViewMatrix())); // MatrixToNrd(commonSettings.worldToViewRotationMatrix,
+                                                                                                  // dm::affineToHomogeneous(view.GetViewMatrix()));
+    MatrixToNrd(commonSettings.worldToViewMatrixPrev, dm::affineToHomogeneous(viewPrev.GetViewMatrix())); // MatrixToNrd(commonSettings.worldToViewRotationMatrixPrev,
+                                                                                                          // dm::affineToHomogeneous(viewPrev.GetViewMatrix()));
     MatrixToNrd(commonSettings.viewToClipMatrix, view.GetProjectionMatrix(false));
     MatrixToNrd(commonSettings.viewToClipMatrixPrev, viewPrev.GetProjectionMatrix(false));
 
@@ -428,9 +454,7 @@ void NrdIntegration::RunDenoiserPasses(
                 setItem.resourceHandle = texture;
                 setItem.slot = nrdDescriptorRange.baseRegisterIndex + descriptorOffset;
                 setItem.subresources = subresources;
-                setItem.type = (nrdDescriptorRange.descriptorType == nrd::DescriptorType::TEXTURE)
-                    ? nvrhi::ResourceType::Texture_SRV
-                    : nvrhi::ResourceType::Texture_UAV;
+                setItem.type = (nrdDescriptorRange.descriptorType == nrd::DescriptorType::TEXTURE) ? nvrhi::ResourceType::Texture_SRV : nvrhi::ResourceType::Texture_UAV;
 
                 setDesc.bindings.push_back(setItem);
 

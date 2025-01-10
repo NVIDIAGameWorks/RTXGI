@@ -1,5 +1,5 @@
 [submodule "donut"]
-	path = donut
+	path = external/donut
 	url = https://github.com/NVIDIAGameWorks/donut.git
 	branch = main
 [submodule "external/RayTracingDenoiser"]

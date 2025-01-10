@@ -33,7 +33,7 @@ Instead of tracing a ray or a path to get incident radiance at a given point, we
 The decision to terminate the path early into the cache is informed by a path spread (ray cone) heuristic. The cone approximates the ray and spreads along the path as it intersects surface with various material properties. The interaction with a diffuse surface will significantly increase the cone's radius, whereas smooth/specular surfaces do not contribute as much to the cone's spread. When the radius of the cone reaches a user-specified threshold, the path is safe to terminate early in the cache. This allows the application to control the trade-off between bias and noise.
 
 
-> 📗 **Background materials**
+> 📗 **Related materials**
 >
 >- *[Real-time Neural Radiance Caching for Path Tracing][SiggraphPaper], SIGGRAPH 2021.*
 >- *[Advancing Real-Time Path Tracing with the Neural Radiance Cache][GTC2], GTC 2023.*
@@ -316,28 +316,25 @@ void Shutdown()
 
 # Debugging
 
-## Debug visualizations
-The NRC library provides several ways to visually inspect the quality of the cache data and narrow down potential integration errors. This can be achieved at the pathtracer level and at the resolve pass level.
+## Debug visualizations using the Resolve Modes
+The NRC library provides several ways to visually inspect the quality of the cache data and narrow down potential integration errors. This can be achieved through the default Resolve pass modes.
 
 ### Resolve pass debug visualization 
-Similar to the path tracer debug views, the in-built Resolve pass can be used for debugging by switching its `ResolveMode`. This caters for several types of debug cache data visualizations including a result of the query, a training bounce heatmap, training radiance (raw and smoothed) output, and a direct visualization of the cache. 
+Similar to the path tracer debug views, the in-built Resolve pass can be used for debugging through the `ResolveMode`. This caters for several types of debug cache data visualizations covered below:
 
-When inspecting the direct visualization of the cache, indirect signal as well as defined shadows should be present. Boiling-like artifacts are expected as the NRC is not intended to be _used_ in this way, only previewed for troubleshooting.
-
-![DebugCacheVis][DebugCacheVis]
-<p align="center">
-    <em><small>Figure 5. Direct visualization of the cache - querying at vertex index 0.</small></em>
-</p>
-
-> 💡 This debug view should match the pathtracer's intensity closely. If it does not match the intensity or looks flat and lacks details (such as shadows), it could indicate that the radiance is not correctly recorded in the pathtracer passes, or that the update pass does not trace a small fraction to the full length.
-
-The training bounce heatmap is similar to the pathtracer bounce visualization and ensures that during the update pass, paths are traced on average to four bounces and a  fraction (~16th of the paths) at full length. The visualization of the training radiances at the primary path vertex, should match closely, when accumulated/smoothed, to the ground-truth path tracer output (when the NRC is disabled).
-
-![DebugAll][DebugAll]
-<p align="center">
-    <em><small>Figure 6. Resolve pass debug modes. LHS: query results. Centre: Training bounces heatmap (Red encodes two bounces, yellow-three, green-four, white-eight). RHS: Smoothed training radiance for the primary ray. </small></em>
-</p>
-
+ResolveMode | Description | Correctness Interpretation | Reference Image
+---|---|---|---
+AddQueryResultToOutput | The default behaviour. The query result is added to the output buffer. | The result should be similar to the GT pathtracer but with reduced noise and possibly brighter signal depending on materials and GT pathtracer setup (one SPP and roughly eight bounces or less). | <img max-width="100%" height="auto" src="./figures/nrc_rm0_addquery.png">
+ReplaceOutputWithQueryResult | This mode overwrites the output buffer with the query results. | | <img max-width="100%" height="auto" src="./figures/nrc_rm1_showquery.png">
+TrainingBounceHeatMap | This mode shows a heatmap for the number of training bounces. | You should see more bounces in corners and from smooth surfaces. The number of vertices in the training path maps to debug colors as follows: <br> - 1 : Dark red           (0.5, 0.0, 0.0) <br> - 2 : Red (1.0, 0.0, 0.0) <br> - 3 : Dark yellow (0.5, 0.5, 0.0) <br> - 4 : Green (0.0, 1.0, 0.0) <br> - 5 : Dark cyan (0.0, 0.5, 0.5) <br> - 6 : Blue (0.0, 0.0, 1.0) <br> - 7 : Dark blue (0.5, 0.5, 1.0) <br> - 8 or miss : White (1.0, 1.0, 1.0) | <img max-width="100%" height="auto" src="./figures/nrc_rm2_trainingheatmap.png">
+TrainingBounceHeatMapSmoothed | Same as TrainingBounceHeatMap, but smoothed over time. | | <img max-width="100%" height="auto" src="./figures/nrc_rm3_trainingheatmapsmooth.png">
+PrimaryVertexTrainingRadiance | This mode shows the reconstructed radiance for the primary ray segment. | This should look like a low resolution version of the path traced result, and it will be noisy. The radiance shown here will include 'self training', where cache lookups are injected at the tails of many of the paths. When debugging cache issues, it can sometimes be useful to disable this self training using `nrc::FrameSettings::selfTrainingAttenuation`. | <img max-width="100%" height="auto" src="./figures/nrc_rm4_primarytrainingradiance.png">
+PrimaryVertexTrainingRadianceSmoothed | Same as PrimaryVertexTrainingRadiance, but smoothed over time. | | <img max-width="100%" height="auto" src="./figures/nrc_rm5_primarytrainingradiancesmooth.png">
+SecondaryVertexTrainingRadiance | As PrimaryVertexTrainingRadiance, but for the secondary ray segment. | | <img max-width="100%" height="auto" src="./figures/nrc_rm6_secondarytrainingradiance.png">
+SecondaryVertexTrainingRadianceSmoothed | Same as SecondaryVertexTrainingRadiance, but smoothed over time. | | <img max-width="100%" height="auto" src="./figures/nrc_rm7_secondarytrainingradiancesmooth.png">
+QueryIndex | Debug mode that shows a random color that's a hash of the query index. | When things are working correctly this should look like colored noise. | <img max-width="100%" height="auto" src="./figures/nrc_rm8_queryindex.png">
+TrainingQueryIndex | Same as QueryIndex but for the training pass' self-training records. | When things are working correctly - this should look like coloured noise. | <img max-width="100%" height="auto" src="./figures/nrc_rm9_trainingqueryindex.png">
+DirectCacheView | Direct visualization of the cache (equivalent of querying at vertex zero). | The recommended tool to assess correctness of integration, this debug view should capture features such as shadows and view-dependent specular highlights and display them in a low-detail, over-smoothed output. | <img max-width="100%" height="auto" src="./figures/nrc_rm10_cacheview.gif">
 
 ## Nsight Graphics Frame Debugging
 During the integration it is important to ensure that the NRC buffers are correctly written to by the application's pathtracer. This can be achieved with Nsight Graphics frame capture in conjunction with custom structure definitions for ease of readability.
@@ -382,8 +379,6 @@ The Structured Memory Configuration feature in Nsight comes in handy for inspect
 [NrcTermination]: figures/nrc_introtermination.svg
 [NrcIntegWorkflow]: figures/nrc_integworkflow.svg
 [DebugMethods]: #debugging
-[DebugCacheVis]: figures/nrc_debugcachevis.gif
-[DebugAll]: figures/nrc_debugresolve.png
 [DebugNsight]: figures/nrc_debugnsight.png
 [NrcD3d12h]: https://github.com/NVIDIAGameWorks/NRC/blob/main/include/NrcD3d12.h
 [NrcVkh]: https://github.com/NVIDIAGameWorks/NRC/blob/main/include/NrcVk.h

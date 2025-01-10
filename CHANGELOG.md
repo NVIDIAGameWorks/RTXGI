@@ -1,5 +1,35 @@
 # RTXGI SDK Change Log
 
+## 2.3.0
+
+### RTXGI
+- Project structure change: the Donut framework is now located inside `/external` and no longer resides directly in the repo root.
+- Update NRD and Donut dependencies.
+- Removal of obsolete function definitions from `/samples/pathtracer/pathtracer.hlsl`.
+- Minor refactor to improve consistency and readability.
+- Minor documentation updates for `/docs/QuickStart.md` to reflect recent UI changes.
+- UI restructure for the path tracer sample project to intuitively group settings.
+
+### SHaRC
+- Update to version 1.4.3.0.
+- Split SHaRC parameters to SharcParameters and SharcState which is used only during the update stage.
+- API naming changes to account for `Sharc` and `HashGrid` prefixes to avoid collisions. Most of tweakable `#defines` can now be overridden outside of the main source files.
+- Added extra dynamic parameters to give move control with multiple SHaRC instances.
+- Moved GLSL code snippets to a separate file.
+- Addition of an optional anti-firefly filter.
+- Minor bug fixes with maximum number of accumulated frames.
+
+### NRC
+- Update to version 0.13.2.0.
+- API modification to support loading of custom paths for dependent DLLs.
+- API modification to enable network config file hot-reloading.
+- Bugfix for Vulkan memory type checking.
+- Bugfix type definition for `NrcPackableFloat` when using 16-bit packing.
+- Bugfix for stub functions in `Nrc.hlsli`.
+- Expose the ability to configure the number of training iterations.
+- Refactor and removal of deprecated or obsolete options.
+- Update documentation to reflect recent changes.
+
 ## 2.2.0
 
 ### RTXGI

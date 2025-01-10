@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
  *
  * NVIDIA CORPORATION and its licensors retain all intellectual property
  * and proprietary rights in and to this software, related documentation
@@ -42,10 +42,7 @@ void srgb_to_linear(ImVec4& color)
     color.z = srgb_to_linear(color.z);
 }
 
-PathtracerUI::PathtracerUI(DeviceManager* deviceManager, Pathtracer& app, UIData& ui)
-    : ImGui_Renderer(deviceManager)
-    , m_app(app)
-    , m_ui(ui)
+PathtracerUI::PathtracerUI(DeviceManager* deviceManager, Pathtracer& app, UIData& ui) : ImGui_Renderer(deviceManager), m_app(app), m_ui(ui)
 {
     m_commandList = GetDevice()->createCommandList();
 
@@ -59,7 +56,6 @@ PathtracerUI::PathtracerUI(DeviceManager* deviceManager, Pathtracer& app, UIData
 
 PathtracerUI::~PathtracerUI()
 {
-
 }
 
 void PathtracerUI::buildUI(void)
@@ -78,8 +74,9 @@ void PathtracerUI::buildUI(void)
 
         char messageBuffer[256];
         const auto& stats = Scene::GetLoadingStats();
-        snprintf(messageBuffer, std::size(messageBuffer), "Loading scene %s, please wait...\nObjects: %d/%d, Textures: %d/%d",
-            m_app.GetCurrentSceneName().c_str(), stats.ObjectsLoaded.load(), stats.ObjectsTotal.load(), m_app.GetTextureCache()->GetNumberOfLoadedTextures(), m_app.GetTextureCache()->GetNumberOfRequestedTextures());
+        snprintf(messageBuffer, std::size(messageBuffer), "Loading scene %s, please wait...\nObjects: %d/%d, Textures: %d/%d", m_app.GetCurrentSceneName().c_str(),
+                 stats.ObjectsLoaded.load(), stats.ObjectsTotal.load(), m_app.GetTextureCache()->GetNumberOfLoadedTextures(),
+                 m_app.GetTextureCache()->GetNumberOfRequestedTextures());
 
         DrawScreenCenteredText(messageBuffer);
 
@@ -96,10 +93,8 @@ void PathtracerUI::buildUI(void)
     ImGui::StyleColorsDark();
     ImGuiStyle* style = &ImGui::GetStyle();
     ImVec4* colors = style->Colors;
-    for(int i = 0; i < (int) ImGuiCol_COUNT; ++i)
-    {
+    for (int i = 0; i < (int)ImGuiCol_COUNT; ++i)
         srgb_to_linear(colors[i]);
-    }
 
     ImGui::Text("%s, %s", GetDeviceManager()->GetRendererString(), m_app.GetResolutionInfo().c_str());
     double frameTime = GetDeviceManager()->GetAverageFrameTimeSeconds();
@@ -124,9 +119,7 @@ void PathtracerUI::buildUI(void)
                 {
                     bool is_selected = scene == currentScene;
                     if (ImGui::Selectable(scene.c_str(), is_selected))
-                    {
                         m_app.SetCurrentSceneName(scene);
-                    }
 
                     if (is_selected)
                         ImGui::SetItemDefaultFocus();
@@ -134,9 +127,12 @@ void PathtracerUI::buildUI(void)
                 ImGui::EndCombo();
             }
 
-            updateAccum |= ImGui::Checkbox("Accumulate", &m_ui.enableAccumulation); ImGui::SameLine();
-            updateAccum |= ImGui::Checkbox("Jitter", &m_ui.enableJitter); ImGui::SameLine();
-            updateAccum |= ImGui::Checkbox("Transmission", &m_ui.enableTransmission); ImGui::SameLine();
+            updateAccum |= ImGui::Checkbox("Jitter", &m_ui.enableJitter);
+            ImGui::SameLine();
+            updateAccum |= ImGui::Checkbox("Russian Roulette", &m_ui.enableRussianRoulette);
+            ImGui::SameLine();
+            updateAccum |= ImGui::Checkbox("Transmission", &m_ui.enableTransmission);
+            ImGui::SameLine();
 
             if (ImGui::Checkbox("Animations", &m_ui.enableAnimations))
             {
@@ -154,19 +150,58 @@ void PathtracerUI::buildUI(void)
     {
         ImGui::Indent(12.0f);
         {
-            if (ImGui::RadioButton("Enable default path tracer", m_ui.currentMode == TechSelection::None))
+            ImGui::Text("Mode:");
+            ImGui::SameLine();
+            if (ImGui::RadioButton("Reference", (m_ui.techSelection == TechSelection::None)))
             {
-                m_ui.currentMode = TechSelection::None;
-#if ENABLE_NRC
-                m_ui.enableNrc = false;
-#endif // ENABLE_NRC
-#if ENABLE_SHARC
-                m_ui.enableSharc = false;
-#endif // ENABLE_SHARC
+                m_ui.techSelection = TechSelection::None;
                 updateAccum = true;
             }
 
-            updateAccum |= ImGui::SliderInt("Bounces", &m_ui.bouncesMax, 1, 8);
+#if ENABLE_NRC
+            ImGui::SameLine();
+            ImGui::BeginDisabled(!m_app.GetNrcInstance()->IsInitialized());
+            if (ImGui::RadioButton("NRC", m_ui.techSelection == TechSelection::Nrc))
+            {
+                m_ui.techSelection = TechSelection::Nrc;
+                updateAccum = true;
+            }
+            ImGui::EndDisabled();
+#endif
+
+#if ENABLE_SHARC
+            ImGui::SameLine();
+            if (ImGui::RadioButton("SHaRC", m_ui.techSelection == TechSelection::Sharc))
+            {
+                m_ui.techSelection = TechSelection::Sharc;
+                updateAccum = true;
+            }
+#endif
+
+            ImGui::Text("Denoiser:");
+            ImGui::SameLine();
+            if (ImGui::RadioButton("None", m_ui.denoiserSelection == DenoiserSelection::None))
+            {
+                m_ui.denoiserSelection = DenoiserSelection::None;
+                updateAccum = true;
+            }
+            ImGui::SameLine();
+            if (ImGui::RadioButton("Accumulation", m_ui.denoiserSelection == DenoiserSelection::Accumulation))
+            {
+                m_ui.denoiserSelection = DenoiserSelection::Accumulation;
+                // m_ui.enableAccumulation = true;
+                updateAccum = true;
+            }
+#if ENABLE_NRD
+            ImGui::SameLine();
+            if (ImGui::RadioButton("NRD", m_ui.denoiserSelection == DenoiserSelection::Nrd))
+            {
+                m_ui.denoiserSelection = DenoiserSelection::Nrd;
+                updateAccum = true;
+            }
+#endif
+
+            updateAccum |= ImGui::SliderInt("Bounces", &m_ui.bouncesMax, 1, 24);
             updateAccum |= ImGui::SliderInt("Samples Per Pixel", &m_ui.samplesPerPixel, 1, 16);
             updateAccum |= ImGui::SliderFloat("Exposure Adjustment", &m_ui.exposureAdjustment, -8.f, 8.0f);
             updateAccum |= ImGui::SliderFloat("Roughness Min", &m_ui.roughnessMin, 0.0f, 1.0f);
@@ -182,57 +217,27 @@ void PathtracerUI::buildUI(void)
         ImGui::Indent(-12.0f);
     }
 
-#if ENABLE_DENOISER
-    ImGui::Separator();
-    if (ImGui::CollapsingHeader("Denoiser:", ImGuiTreeNodeFlags_DefaultOpen))
-    {
-        ImGui::Indent(12.0f);
-        {
-            updateAccum |= ImGui::Combo("Tech", (int*)&m_ui.denoiserSelection, m_ui.denoiserSelectionStrings);
-
-            switch (m_ui.denoiserSelection)
-            {
-            case DenoiserSelection::None:
-                m_ui.enableDenoiser = false;
-                break;
-            case DenoiserSelection::Nrd:
-                m_ui.enableDenoiser = true;
-                break;
-            }
-        }
-        ImGui::Indent(-12.0f);
-    }
-#endif // ENABLE_DENOISER
-
 #if ENABLE_NRC
     ImGui::Separator();
-    if (ImGui::CollapsingHeader("NRC:", ImGuiTreeNodeFlags_DefaultOpen))
+    if (ImGui::CollapsingHeader((m_ui.techSelection == TechSelection::Nrc) ? "NRC:" : "Select NRC PT Mode to see NRC options", ImGuiTreeNodeFlags_DefaultOpen))
     {
         ImGui::Indent(12.0f);
+        if (m_ui.techSelection == TechSelection::Nrc)
         {
-            ImGui::BeginDisabled(!m_app.GetNrcInstance()->IsInitialized());
-            if (ImGui::RadioButton("Enable NRC", m_ui.currentMode == TechSelection::Nrc))
-            {
-                m_ui.currentMode = TechSelection::Nrc;
-                m_ui.enableNrc = true;
-#if ENABLE_SHARC
-                m_ui.enableSharc = false;
-#endif // ENABLE_SHARC
-                updateAccum = true;
-            }
-
             updateAccum |= ImGui::Checkbox("Train The Cache", &m_ui.nrcTrainCache);
+            updateAccum |= ImGui::SliderInt("Training Bounces", &m_ui.nrcMaxTrainingBounces, 1, 8);
             updateAccum |= ImGui::Checkbox("Learn Irradiance", &m_ui.nrcLearnIrradiance);
             updateAccum |= ImGui::Checkbox("Include Direct Illumination", &m_ui.nrcIncludeDirectIllumination);
             updateAccum |= ImGui::Checkbox("Skip delta vertices", &m_ui.nrcSkipDeltaVertices);
-            updateAccum |= ImGui::SliderFloat("Heuristic Threshold", &m_ui.nrcTerminationHeuristicThreshold, 0.0f, 0.1f);
+            updateAccum |= ImGui::SliderFloat("Self-Training Attenuation", &m_ui.nrcSelfTrainingAttenuation, 0.0f, 1.0f, "%.3f");
+            updateAccum |= ImGui::SliderFloat("Heuristic Threshold", &m_ui.nrcTerminationHeuristicThreshold, 0.0f, 0.25f, "%.3f");
+            updateAccum |= ImGui::SliderInt("Num Training Iterations", &m_ui.nrcNumTrainingIterations, 1, 4);
+            updateAccum |= ImGui::SliderFloat("Primary segments to train on", &m_ui.nrcProportionPrimarySegmentsToTrainOn, 0.0f, 1.0f, "%.2f");
+            updateAccum |= ImGui::SliderFloat("Tertiary+ segments to train on", &m_ui.nrcProportionTertiaryPlusSegmentsToTrainOn, 0.0f, 1.0f, "%.2f");
+            updateAccum |= ImGui::SliderFloat("Proportion unbiased", &m_ui.nrcProportionUnbiased, 0.0f, 1.0f, "%.2f");
+            updateAccum |= ImGui::SliderFloat("Unbiased self-training", &m_ui.nrcProportionUnbiasedToSelfTrain, 0.0f, 1.0f, "%.2f");
             updateAccum |= ImGui::SliderFloat("Max Average Radiance Value", &m_ui.nrcMaxAverageRadiance, 0.001f, 1000.0f);
-
-            updateAccum |= ImGui::Combo(
-                "Resolve Mode", (int*)&m_ui.nrcResolveMode,
-                "Add Query (Default)\0Show Query\0Training HeatMap\0Training HeatMap Smoothed\0Training Radiance\0Training Radiance Smoothed\0Query Index\0Training Query Index\0Debug Cache View\0");
-
-            ImGui::EndDisabled();
+            updateAccum |= ImGui::Combo("Resolve Mode", (int*)&m_ui.nrcResolveMode, nrc::GetImGuiResolveModeComboString());
         }
         ImGui::Indent(-12.0f);
     }
@@ -240,22 +245,16 @@ void PathtracerUI::buildUI(void)
 
 #if ENABLE_SHARC
     ImGui::Separator();
-    if (ImGui::CollapsingHeader("SHARC:", ImGuiTreeNodeFlags_DefaultOpen))
+    if (ImGui::CollapsingHeader((m_ui.techSelection == TechSelection::Sharc) ? "SHaRC:" : "Select SHaRC PT Mode to see SHaRC options", ImGuiTreeNodeFlags_DefaultOpen))
     {
         ImGui::Indent(12.0f);
+        if (m_ui.techSelection == TechSelection::Sharc)
         {
-            if (ImGui::RadioButton("Enable SHARC", m_ui.currentMode == TechSelection::Sharc))
-            {
-                m_ui.currentMode = TechSelection::Sharc;
-#if ENABLE_NRC
-                m_ui.enableNrc = false;
-#endif // ENABLE_NRC
-                m_ui.enableSharc = true;
-                updateAccum = true;
-            }
             updateAccum |= ImGui::Checkbox("Enable Clear", &m_ui.sharcEnableClear);
             updateAccum |= ImGui::Checkbox("Enable Update", &m_ui.sharcEnableUpdate);
             updateAccum |= ImGui::Checkbox("Enable Resolve", &m_ui.sharcEnableResolve);
+            updateAccum |= ImGui::Checkbox("Enable Anti Firefly", &m_ui.sharcEnableAntiFireflyFilter);
+            updateAccum |= ImGui::Checkbox("Update View Camera", &m_ui.sharcUpdateViewCamera);
             updateAccum |= ImGui::Checkbox("Enable Debug", &m_ui.sharcEnableDebug);
             updateAccum |= ImGui::SliderInt("Accumulation Frame Number", &m_ui.sharcAccumulationFrameNum, 1, 30);
             updateAccum |= ImGui::SliderInt("Stale Frame Number", &m_ui.sharcStaleFrameFrameNum, 1, 128);
@@ -295,7 +294,6 @@ void PathtracerUI::buildUI(void)
                         ImGui::SetItemDefaultFocus();
                     }
                     lightIndex++;
-
                 }
                 ImGui::EndCombo();
             }

@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2024, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2023-2025, NVIDIA CORPORATION.  All rights reserved.
 #
 # NVIDIA CORPORATION and its licensors retain all intellectual property
 # and proprietary rights in and to this software, related documentation
@@ -8,7 +8,8 @@
 
 cmake_minimum_required (VERSION 3.19)
 
-include(../../donut/compileshaders.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/../../external/donut/compileshaders.cmake)
+
 file(GLOB shaders "*.hlsl")
 file(GLOB sources "*.cpp" "*.h")
 
@@ -62,8 +63,8 @@ donut_compile_shaders(
         FOLDER ${folder}
         SPIRV_DXC ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders/${project}/spirv
         DXIL ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders/${project}/dxil
-        COMPILER_OPTIONS_SPIRV ${SHADERMAKE_GENERAL_ARGS_SPIRV}
-        COMPILER_OPTIONS_DXIL ${SHADERMAKE_GENERAL_ARGS_DXIL}
+        SHADERMAKE_OPTIONS_SPIRV ${SHADERMAKE_GENERAL_ARGS_SPIRV}
+        SHADERMAKE_OPTIONS_DXIL ${SHADERMAKE_GENERAL_ARGS_DXIL}
 )
 
 add_executable(${project} WIN32 ${sources})

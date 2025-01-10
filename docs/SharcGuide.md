@@ -34,10 +34,11 @@ At Render-Time
 `Hash grid` visualization itself doesn’t require any GPU resources to be used. The simplest debug visualization uses world space position derived from the primary ray hit intersection.
 
 ```C++
-GridParameters gridParameters;
+HashGridParameters gridParameters;
 gridParameters.cameraPosition = g_Constants.cameraPosition;
 gridParameters.logarithmBase = SHARC_GRID_LOGARITHM_BASE;
 gridParameters.sceneScale = g_Constants.sharcSceneScale;
+gridParameters.levelBias = SHARC_GRID_LEVEL_BIAS;
 
 float3 color = HashGridDebugColoredHash(positionWorld, gridParameters);
 ```
@@ -48,7 +49,7 @@ float3 color = HashGridDebugColoredHash(positionWorld, gridParameters);
 <figcaption>Image 2. SHaRC hash grid vizualization</figcaption>
 </figure>
 
-Logarithm base controls levels of detail distribution and voxel size ratio change between neighboring levels, it doesn’t make voxel sizes bigger or smaller on average. To control voxel size use ```sceneScale``` parameter instead. HASH_GRID_LEVEL_BIAS should be used to control at which level near the camera the voxel level get's clamped to avoid getting detailed levels if it is not required.
+Logarithm base controls levels of detail distribution and voxel size ratio change between neighboring levels, it doesn’t make voxel sizes bigger or smaller on average. To control voxel size use ```sceneScale``` parameter instead. HashGridParameters::levelBias should be used to control at which level near the camera the voxel level get's clamped to avoid getting detailed levels if it is not required.
 
 ## Implementation Details
 

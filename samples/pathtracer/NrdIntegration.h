@@ -1,12 +1,12 @@
 /*
-* Copyright (c) 2024, NVIDIA CORPORATION.  All rights reserved.
-*
-* NVIDIA CORPORATION and its licensors retain all intellectual property
-* and proprietary rights in and to this software, related documentation
-* and any modifications thereto.  Any use, reproduction, disclosure or
-* distribution of this software and related documentation without an express
-* license agreement from NVIDIA CORPORATION is strictly prohibited.
-*/
+ * Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * NVIDIA CORPORATION and its licensors retain all intellectual property
+ * and proprietary rights in and to this software, related documentation
+ * and any modifications thereto.  Any use, reproduction, disclosure or
+ * distribution of this software and related documentation without an express
+ * license agreement from NVIDIA CORPORATION is strictly prohibited.
+ */
 
 #pragma once
 
@@ -18,9 +18,9 @@ class RenderTargets;
 
 namespace donut::engine
 {
-    class PlanarView;
-    class ShaderFactory;
-}
+class PlanarView;
+class ShaderFactory;
+} // namespace donut::engine
 
 class NrdIntegration
 {
@@ -31,21 +31,23 @@ public:
     bool Initialize(uint32_t width, uint32_t height, donut::engine::ShaderFactory& shaderFactory);
     bool IsAvailable() const;
 
-    void RunDenoiserPasses(
-        nvrhi::ICommandList* commandList,
-        const RenderTargets& renderTargets,
-        int pass,
-        const donut::engine::PlanarView& view,
-        const donut::engine::PlanarView& viewPrev,
-        uint32_t frameIndex,
-        float disocclusionThreshold,
-        float disocclusionThresholdAlternate,
-        bool useDisocclusionThresholdAlternateMix,
-        bool enableValidation,
-        const void* methodSettings,
-        bool reset);
+    void RunDenoiserPasses(nvrhi::ICommandList* commandList,
+                           const RenderTargets& renderTargets,
+                           int pass,
+                           const donut::engine::PlanarView& view,
+                           const donut::engine::PlanarView& viewPrev,
+                           uint32_t frameIndex,
+                           float disocclusionThreshold,
+                           float disocclusionThresholdAlternate,
+                           bool useDisocclusionThresholdAlternateMix,
+                           bool enableValidation,
+                           const void* methodSettings,
+                           bool reset);
 
-    const nrd::Denoiser GetDenoiser() const { return m_denoiser; }
+    const nrd::Denoiser GetDenoiser() const
+    {
+        return m_denoiser;
+    }
 
 private:
     nvrhi::DeviceHandle m_device;

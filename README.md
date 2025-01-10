@@ -25,7 +25,6 @@ RTXGI SDK provides an example integration (DX12 and Vulkan) of two state-of-the-
 |Directory                   |Details                                      |
 |----------------------------|---------------------------------------------|
 |[/docs][docs]               |_Documentation for showcased tech_           |
-|[/donut][donut]             |_Framework used for the samples_             |
 |[/external][external]       |_Helper dependencies for the samples_        |
 |[/media][media]             |_Assets and scene definitions_               |
 |[/samples][samples]         |_Samples showcasing usage of NRC, SHaRC_     |
@@ -61,7 +60,7 @@ Use the following BibTex entry to cite the usage of RTXGI in published research:
 See [LICENSE.md](LICENSE.md)
 
 ## RTXGI v1.x
-Version v1.x of RTXGI which includes the DDGI algorithm is located in a separate repo at the following url: https://github.com/NVIDIAGameWorks/RTXGI-DDGI".
+Version v1.x of RTXGI which includes the DDGI algorithm is located in a separate repo at the following url: https://github.com/NVIDIAGameWorks/RTXGI-DDGI.
 
 
 [ChangeLog]: CHANGELOG.md
@@ -70,7 +69,6 @@ Version v1.x of RTXGI which includes the DDGI algorithm is located in a separate
 [NrcGuide]: docs/NrcGuide.md
 [ProjectStructure]: #project-structure
 [docs]: docs
-[donut]: donut
 [external]: external
 [media]: media
 [samples]: samples/pathtracer

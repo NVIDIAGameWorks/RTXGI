@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
  *
  * NVIDIA CORPORATION and its licensors retain all intellectual property
  * and proprietary rights in and to this software, related documentation
@@ -12,7 +12,7 @@
 
 #include <donut/shaders/bindless.h>
 #include <donut/shaders/utils.hlsli>
-#include <donut/shaders/vulkan.hlsli>
+#include <donut/shaders/binding_helpers.hlsli>
 #include <donut/shaders/packing.hlsli>
 #include <donut/shaders/surface.hlsli>
 #include <donut/shaders/lighting.hlsli>
@@ -21,14 +21,12 @@
 #define ENABLE_NRC 1
 #include "Nrc.hlsli"
 
-#include "brdf.h"
-#include "global_cb.h"
-#include "lighting_cb.h"
+#include "Brdf.h"
+#include "GlobalCb.h"
+#include "LightingCb.h"
 #include "PathtracerUtils.h"
 
-#if (SHARC_UPDATE || SHARC_QUERY)
 #include "SharcCommon.h"
-#endif // (SHARC_UPDATE || SHARC_QUERY)
 
 #define BOUNCES_MIN                     3
 #define RIS_CANDIDATES_LIGHTS           8 // Number of candidates used for resampling of analytical lights
@@ -66,11 +64,11 @@ StructuredBuffer<MaterialConstants>             t_MaterialConstants             
 RWTexture2D<float4>                             u_Output                                : register(u0, space0);
 SamplerState                                    s_MaterialSampler                       : register(s0, space0);
 
-//reg, dset
+// reg, dset
 VK_BINDING(0, 4) ByteAddressBuffer               t_BindlessBuffers[]                     : register(t0, space1);
 VK_BINDING(1, 4) Texture2D                       t_BindlessTextures[]                    : register(t0, space2);
 
-#if ENABLE_DENOISER
+#if ENABLE_NRD
 RWTexture2D<float4>             u_OutputDiffuseHitDistance                              : register(u0, space1);
 RWTexture2D<float4>             u_OutputSpecularHitDistance                             : register(u1, space1);
 RWTexture2D<float>              u_OutputViewSpaceZ                                      : register(u2, space1);
@@ -79,9 +77,8 @@ RWTexture2D<float4>             u_OutputMotionVectors                           
 RWTexture2D<float4>             u_OutputEmissive                                        : register(u5, space1);
 RWTexture2D<float4>             u_OutputDiffuseAlbedo                                   : register(u6, space1);
 RWTexture2D<float4>             u_OutputSpecularAlbedo                                  : register(u7, space1);
-#endif // ENABLE_DENOISER
+#endif // ENABLE_NRD
 
-#if ENABLE_NRC
 RWStructuredBuffer<NrcPackedQueryPathInfo>      queryPathInfo                           : register(u0, space2); // Misc path info (vertexCount, queryIndex)
 RWStructuredBuffer<NrcPackedTrainingPathInfo>   trainingPathInfo                        : register(u1, space2); // Misc path info (vertexCount, queryIndex)
 RWStructuredBuffer<NrcPackedPathVertex>         trainingPathVertices                    : register(u2, space2); // Path vertex data used to train the neural radiance cache
@@ -91,58 +88,30 @@ RWStructuredBuffer<uint>                        countersData                    
 #define WRITE_TRAINING_DEBUG_PARAMS
 #define WRITE_TRAINING_OUTPUT_DEBUG_PARAMS
 #define WRITE_QUERY_OUTPUT_DEBUG_PARAMS
-#endif // ENABLE_NRC
 
-#if SHARC_UPDATE || SHARC_QUERY
 RWStructuredBuffer<uint64_t>    u_SharcHashEntriesBuffer        : register(u0, space3);
 RWStructuredBuffer<uint>        u_HashCopyOffsetBuffer          : register(u1, space3);
 RWStructuredBuffer<uint4>       u_SharcVoxelDataBuffer          : register(u2, space3);
 RWStructuredBuffer<uint4>       u_SharcVoxelDataBufferPrev      : register(u3, space3);
-#endif // SHARC_UPDATE || SHARC_QUERY
 
-RayDesc GeneratePinholeCameraRay(float2 normalisedDeviceCoordinate)
+RayDesc GeneratePinholeCameraRay(float2 normalisedDeviceCoordinate, float4x4 viewToWorld, float4x4 viewToClip)
 {
     // Set up the ray
     RayDesc ray;
-    ray.Origin = g_Lighting.view.matViewToWorld[3].xyz;
+    ray.Origin = viewToWorld[3].xyz;
     ray.TMin = 0.0f;
     ray.TMax = TRACING_DISTANCE;
 
     // Extract the aspect ratio and fov from the projection matrix
-    float aspect = g_Lighting.view.matViewToClip[1][1] / g_Lighting.view.matViewToClip[0][0];
-    float tanHalfFovY = 1.0f / g_Lighting.view.matViewToClip[1][1];
+    float aspect = viewToClip[1][1] / viewToClip[0][0];
+    float tanHalfFovY = 1.0f / viewToClip[1][1];
 
     // Compute the ray direction
     ray.Direction = normalize(
-        ((normalisedDeviceCoordinate.x * 2.f - 1.f) * g_Lighting.view.matViewToWorld[0].xyz * tanHalfFovY * aspect) -
-        ((normalisedDeviceCoordinate.y * 2.f - 1.f) * g_Lighting.view.matViewToWorld[1].xyz * tanHalfFovY) +
-        g_Lighting.view.matViewToWorld[2].xyz);
+        ((normalisedDeviceCoordinate.x * 2.f - 1.f) * viewToWorld[0].xyz * tanHalfFovY * aspect) -
+        ((normalisedDeviceCoordinate.y * 2.f - 1.f) * viewToWorld[1].xyz * tanHalfFovY) +
+        viewToWorld[2].xyz);
 
-    return ray;
-}
-
-RayDesc setupPrimaryRay(uint2 pixelPosition, PlanarViewConstants view)
-{
-    float2 uv = (float2(pixelPosition)+0.5) * view.viewportSizeInv;
-    float4 clipPos = float4(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0, 0.5, 1);
-    float4 worldPos = mul(clipPos, view.matClipToWorld);
-    worldPos.xyz /= worldPos.w;
-
-    RayDesc ray;
-    ray.Origin = view.cameraDirectionOrPosition.xyz;
-    ray.Direction = normalize(worldPos.xyz - ray.Origin);
-    ray.TMin = 0;
-    ray.TMax = 1000;
-    return ray;
-}
-
-RayDesc setupShadowRay(float3 surfacePos, float3 viewIncident)
-{
-    RayDesc ray;
-    ray.Origin = surfacePos - viewIncident * 0.001;
-    ray.Direction = -g_Lighting.sunLight.direction;
-    ray.TMin = 0;
-    ray.TMax = 1000;
     return ray;
 }
 
@@ -374,6 +343,7 @@ void AnyHit(inout RayPayload payload : SV_RayPayload, in Attributes attrib : SV_
     // AcceptHit but continue looking for the closest hit
 }
 
+// TODO: Delete this
 [shader("miss")]
 void ShadowMiss(inout ShadowRayPayload payload : SV_RayPayload)
 {
@@ -417,19 +387,19 @@ void AnyHitShadow(inout ShadowRayPayload payload : SV_RayPayload, in Attributes 
 struct AccumulatedSampleData
 {
     float3 radiance;
-#if ENABLE_DENOISER
+#if ENABLE_NRD
     float hitDistance;
 #if ENABLE_SPECULAR_LOBE
     uint diffuseSampleNum;
     float3 specularRadiance;
     float specularHitDistance;
 #endif // ENABLE_SPECULAR_LOBE
-#endif // ENABLE_DENOISER
+#endif // ENABLE_NRD
 };
 
 void UpdateSampleData(inout AccumulatedSampleData accumulatedSampleData, float3 sampleRadiance, bool isDiffusePath, float hitDistance)
 {
-#if ENABLE_DENOISER
+#if ENABLE_NRD
 #if ENABLE_SPECULAR_LOBE
     if (!isDiffusePath)
     {
@@ -440,14 +410,14 @@ void UpdateSampleData(inout AccumulatedSampleData accumulatedSampleData, float3 
     accumulatedSampleData.diffuseSampleNum++;
 #endif // ENABLE_SPECULAR_LOBE
     accumulatedSampleData.hitDistance += hitDistance;
-#endif // ENABLE_DENOISER
+#endif // ENABLE_NRD
 
     accumulatedSampleData.radiance += sampleRadiance;
 }
 
 void ResolveSampleData(inout AccumulatedSampleData accumulatedSampleData, uint sampleNum, float intensityScale)
 {
-#if ENABLE_DENOISER
+#if ENABLE_NRD
 #if ENABLE_SPECULAR_LOBE
     uint specularSampleNum = sampleNum - accumulatedSampleData.diffuseSampleNum;
     if (specularSampleNum)
@@ -466,14 +436,26 @@ void ResolveSampleData(inout AccumulatedSampleData accumulatedSampleData, uint s
         accumulatedSampleData.hitDistance *= (1.0f / diffuseSampleNum);
     }
     u_OutputDiffuseHitDistance[DispatchRaysIndex().xy] = float4(accumulatedSampleData.radiance, accumulatedSampleData.hitDistance);
-#else // !ENABLE_DENOISER
+#else // !ENABLE_NRD
     accumulatedSampleData.radiance *= (intensityScale / sampleNum);
     u_Output[DispatchRaysIndex().xy] = float4(accumulatedSampleData.radiance, 1.0f);
-#endif // !ENABLE_DENOISER
+#endif // !ENABLE_NRD
 }
 
 void PathTraceRays()
 {
+#if ENABLE_NRD
+    const bool enableNrd = true;
+#else // !ENABLE_NRD
+    const bool enableNrd = false;
+#endif // !ENABLE_NRD
+
+#if (NRC_UPDATE || SHARC_UPDATE)
+    const bool isUpdatePass = true;
+#else // !(NRC_UPDATE || SHARC_UPDATE)
+    const bool isUpdatePass = false;
+#endif // !(NRC_UPDATE || SHARC_UPDATE)
+
     const uint2 launchIndex = DispatchRaysIndex().xy;
     const uint2 launchDimensions = DispatchRaysDimensions().xy;
     uint rngState = InitRNG(launchIndex, launchDimensions, g_Global.frameIndex);
@@ -492,56 +474,50 @@ void PathTraceRays()
     // Create NrcContext
     NrcContext nrcContext = NrcCreateContext(g_Lighting.nrcConstants, buffers, launchIndex);
 
-#if SHARC_UPDATE || SHARC_QUERY
-    SharcState sharcState;
+    // Initialize SHARC parameters
+    SharcParameters sharcParameters;
+    {
+        sharcParameters.gridParameters.cameraPosition = g_Lighting.sharcCameraPosition.xyz;
+        sharcParameters.gridParameters.sceneScale = g_Lighting.sharcSceneScale;
+        sharcParameters.gridParameters.logarithmBase = SHARC_GRID_LOGARITHM_BASE;
+        sharcParameters.gridParameters.levelBias = SHARC_GRID_LEVEL_BIAS;
 
-    sharcState.gridParameters.cameraPosition = g_Lighting.sharcCameraPosition.xyz;
-    sharcState.gridParameters.logarithmBase = SHARC_GRID_LOGARITHM_BASE;
-    sharcState.gridParameters.sceneScale = g_Lighting.sharcSceneScale;
-
-    sharcState.hashMapData.capacity = g_Lighting.sharcEntriesNum;
-    sharcState.hashMapData.hashEntriesBuffer = u_SharcHashEntriesBuffer;
+        sharcParameters.hashMapData.capacity = g_Lighting.sharcEntriesNum;
+        sharcParameters.hashMapData.hashEntriesBuffer = u_SharcHashEntriesBuffer;
 
 #if !SHARC_ENABLE_64_BIT_ATOMICS
-    sharcState.hashMapData.lockBuffer = u_HashCopyOffsetBuffer;
+        sharcParameters.hashMapData.lockBuffer = u_HashCopyOffsetBuffer;
 #endif // !SHARC_ENABLE_64_BIT_ATOMICS
 
-    sharcState.voxelDataBuffer = u_SharcVoxelDataBuffer;
-#if SHARC_ENABLE_CACHE_RESAMPLING
-    sharcState.voxelDataBufferPrev = u_SharcVoxelDataBufferPrev;
-#endif // SHARC_ENABLE_CACHE_RESAMPLING
-#endif // SHARC_UPDATE || SHARC_QUERY
+        sharcParameters.voxelDataBuffer = u_SharcVoxelDataBuffer;
+        sharcParameters.voxelDataBufferPrev = u_SharcVoxelDataBufferPrev;
 
-#if NRC_UPDATE || SHARC_UPDATE
-    const int samplesPerPixel = 1;
-#else
-    const int samplesPerPixel = g_Global.samplesPerPixel;
-#endif
+        sharcParameters.enableAntiFireflyFilter = g_Lighting.sharcEnableAntifirefly;
+    }
+
+    const int samplesPerPixel = isUpdatePass ? 1 : g_Global.samplesPerPixel;
+    if (!isUpdatePass)
+        u_Output[launchIndex] = float4(0.0f, 0.0f, 0.0f, 0.0f);
 
     for (int sampleIndex = 0; sampleIndex < samplesPerPixel; sampleIndex++)
     {
         // Initialize NRC data for path and sample index traced in this thread
-        NrcPathState nrcPathState = NrcCreatePathState(Rand(rngState));
+        NrcPathState nrcPathState = NrcCreatePathState(g_Lighting.nrcConstants, Rand(rngState));
         NrcSetSampleIndex(nrcContext, sampleIndex);
 
-#if SHARC_UPDATE
+        // Initialize SHARC state
+        SharcState sharcState;
         SharcInit(sharcState);
-#endif // SHARC_UPDATE
 
         float2 pixel = float2(launchIndex);
+        pixel += (g_Global.enableJitter || isUpdatePass) ? float2(Rand(rngState), Rand(rngState)) : 0.5f.xx;
+        RayDesc ray = GeneratePinholeCameraRay(pixel / launchDimensions,
+            isUpdatePass ? g_Lighting.updatePassView.matViewToWorld : g_Lighting.view.matViewToWorld,
+            isUpdatePass ? g_Lighting.updatePassView.matViewToClip : g_Lighting.view.matViewToClip);
 
-#if NRC_UPDATE || SHARC_UPDATE
-        const bool doJitter = true; // Always jitter when we're updating a radiance cache
-#else
-        const bool doJitter = g_Global.enableJitter;
-#endif
-        pixel += doJitter ? float2(Rand(rngState), Rand(rngState)) : 0.5f.xx;
-
-        RayDesc ray = GeneratePinholeCameraRay(pixel / launchDimensions);
-#if !SHARC_UPDATE
         float3 sampleRadiance = float3(0.0f, 0.0f, 0.0f);
         float3 throughput = float3(1.0f, 1.0f, 1.0f);
-#endif // !SHARC_UPDATE
+
         float materialRoughnessPrev = 0.0f;
         bool isDiffusePath = true; // Used by denoiser
         float hitDistance = 0.0f; // Used by denoiser
@@ -571,40 +547,29 @@ void PathTraceRays()
             // (SHaRC handles the propagation of radiance along the path)
             // So we don't need to track throughput along the path.
             // A simple way to achieve this is to reset it to 1 at the start of the bounce.
-            float3 sampleRadiance = 0.0f.xxx;
-            float3 throughput = 1.0f.xxx;
+            sampleRadiance = float3(0.0f, 0.0f, 0.0f);
+            throughput = float3(1.0f, 1.0f, 1.0f);
 #endif // SHARC_UPDATE
 
-#if ENABLE_DENOISER
-            if (bounce == 1)
+            if (enableNrd && bounce == 1)
                 hitDistance = payload.Hit() ? payload.hitDistance : TRACING_DISTANCE;
-#endif // ENABLE_DENOISER
 
             // On a miss, load the sky value and break out of the ray tracing loop
             if (!payload.Hit())
             {
                 float3 skyValue = g_Lighting.skyColor.rgb;
-#if SHARC_UPDATE
-                SharcUpdateMiss(sharcState, skyValue);
-#endif // SHARC_UPDATE
+
+                SharcUpdateMiss(sharcParameters, sharcState, skyValue);
 
                 NrcUpdateOnMiss(nrcPathState);
 
                 sampleRadiance += skyValue * throughput;
 
-#if ENABLE_DENOISER
-                if (bounce == 0)
+                if (enableNrd && bounce == 0)
                     u_Output[launchIndex] = float4(sampleRadiance, 1.0f);
-#endif // ENABLE_DENOISER
 
                 break;
             }
-#if ENABLE_DENOISER && NRC_QUERY
-            else if (bounce == 0)
-            {
-                u_Output[launchIndex] = float4(0.0f, 0.0f, 0.0f, 0.0f);
-            }
-#endif // ENABLE_DENOISER && NRC_QUERY
 
             GeometrySample geometry = getGeometryFromHit(payload.instanceID, payload.primitiveIndex, payload.geometryIndex, payload.barycentrics, GeomAttr_All, t_InstanceData, t_GeometryData, t_MaterialConstants);
             MaterialSample material = SampleGeometryMaterial(geometry, 0, 0, 0, MatAttr_All, s_MaterialSampler, t_BindlessTextures);
@@ -643,14 +608,11 @@ void PathTraceRays()
             surfaceAttributes.shadingNormal = shadingNormal;
             surfaceAttributes.viewVector = viewVector;
             surfaceAttributes.isDeltaLobe = (material.metalness == 1.0f && material.roughness == 0.0f); // Set to true for perfectly smooth surfaces
-                
-            float hitDistance = payload.hitDistance;
 
-            NrcProgressState nrcProgressState = NrcUpdateOnHit(nrcContext, nrcPathState, surfaceAttributes, hitDistance, bounce, throughput, sampleRadiance);
+            NrcProgressState nrcProgressState = NrcUpdateOnHit(nrcContext, nrcPathState, surfaceAttributes, payload.hitDistance, bounce, throughput, sampleRadiance);
             if (nrcProgressState == NrcProgressState::TerminateImmediately)
                 break;
 
-#if SHARC_UPDATE || SHARC_QUERY
             // Construct SharcHitData structure needed for creating a query point at this hit location
             SharcHitData sharcHitData;
             sharcHitData.positionWorld = hitPos;
@@ -659,7 +621,6 @@ void PathTraceRays()
 #if SHARC_SEPARATE_EMISSIVE
             sharcHitData.emissive = material.emissiveColor;
 #endif // SHARC_SEPARATE_EMISSIVE
-#endif // SHARC_UPDATE || SHARC_QUERY
 
 #if SHARC_UPDATE
             material.roughness = max(g_Lighting.sharcRoughnessThreshold, material.roughness);
@@ -667,8 +628,8 @@ void PathTraceRays()
 
 #if SHARC_QUERY
             {
-                uint gridLevel = GetGridLevel(hitPos, sharcState.gridParameters);
-                float voxelSize = GetVoxelSize(gridLevel, sharcState.gridParameters);
+                uint gridLevel = HashGridGetLevel(hitPos, sharcParameters.gridParameters);
+                float voxelSize = HashGridGetVoxelSize(gridLevel, sharcParameters.gridParameters);
                 bool isValidHit = payload.hitDistance > voxelSize * sqrt(3.0f);
 
                 materialRoughnessPrev = min(materialRoughnessPrev, 0.99f);
@@ -677,7 +638,7 @@ void PathTraceRays()
                 isValidHit &= footrprint > voxelSize;
 
                 float3 sharcRadiance;
-                if (isValidHit && SharcGetCachedRadiance(sharcState, sharcHitData, sharcRadiance, false))
+                if (isValidHit && SharcGetCachedRadiance(sharcParameters, sharcHitData, sharcRadiance, false))
                 {
                     sampleRadiance += sharcRadiance * throughput;
 
@@ -688,7 +649,7 @@ void PathTraceRays()
                 if (g_Global.sharcDebug)
                 {
                     float3 debugColor;
-                    SharcGetCachedRadiance(sharcState, sharcHitData, debugColor, true);
+                    SharcGetCachedRadiance(sharcParameters, sharcHitData, debugColor, true);
                     u_Output[DispatchRaysIndex().xy] = float4(debugColor, 1.0f);
 
                     return;
@@ -746,10 +707,8 @@ void PathTraceRays()
             if (nrcProgressState == NrcProgressState::TerminateAfterDirectLighting)
                 break;
 
-#if SHARC_UPDATE
-            if (!SharcUpdateHit(sharcState, sharcHitData, sampleRadiance, Rand(rngState)))
+            if (!SharcUpdateHit(sharcParameters, sharcState, sharcHitData, sampleRadiance, Rand(rngState)))
                 break;
-#endif // SHARC_UPDATE
 
             // Russian roulette
             if (g_Global.enableRussianRoulette && NrcCanUseRussianRoulette(nrcPathState) && (bounce > BOUNCES_MIN))
@@ -806,7 +765,7 @@ void PathTraceRays()
             materialRoughnessPrev += brdfType == DIFFUSE_TYPE ? 1.0f : material.roughness;
 #endif // SHARC_QUERY
 
-#if ENABLE_DENOISER
+#if ENABLE_NRD
             if (bounce == 0)
             {
                 isDiffusePath = brdfType == DIFFUSE_TYPE;
@@ -833,12 +792,12 @@ void PathTraceRays()
                     }
                 }
             }
-#endif // ENABLE_DENOISER
+#endif // ENABLE_NRD
 
             // Run importance sampling of selected BRDF to generate reflecting ray direction
             float3 brdfWeight = float3(0.0f, 0.0f, 0.0f);
             float brdfPdf = 0.0f;
-            float refractiveIndex = 1.0f;
+            float refractiveIndex = 1.0f; // ior //1.1f;
 
             // Generates a new ray direction
             float2 rand2 = float2(Rand(rngState), Rand(rngState));
@@ -872,33 +831,35 @@ void PathTraceRays()
             // Account for surface properties using the BRDF "weight"
             throughput *= brdfWeight;
 
-#if SHARC_UPDATE
             SharcSetThroughput(sharcState, throughput);
-#else // !SHARC_UPDATE
-            if (luminance(throughput) < g_Global.throughputThreshold)
+
+            if (!isUpdatePass && luminance(throughput) < g_Global.throughputThreshold)
                 break;
-#endif // !SHARC_UPDATE
         }
 
-#if !SHARC_UPDATE
         NrcWriteFinalPathInfo(nrcContext, nrcPathState, throughput, sampleRadiance);
-        UpdateSampleData(accumulatedSampleData, sampleRadiance, isDiffusePath, hitDistance);
 
-        if (g_Global.debugOutputMode == 8 /* Bounce Heatmap */)
-            debugColor = BounceHeatmap(bounce);
-#endif // !SHARC_UPDATE
+        if (!isUpdatePass)
+        {
+            UpdateSampleData(accumulatedSampleData, sampleRadiance, isDiffusePath, hitDistance);
+
+            if (g_Global.debugOutputMode == 8 /* Bounce Heatmap */)
+                debugColor = BounceHeatmap(bounce);
+        }
     }
 
-#if !SHARC_UPDATE && !NRC_UPDATE // Don't write any output when we're just updating a radiance cache
-    {
-        // Write radiance to output buffer
-        ResolveSampleData(accumulatedSampleData, g_Global.samplesPerPixel, 1.0f);
-    }
+    // Don't write any output when we're just updating a radiance cache
+    if (isUpdatePass)
+        return;
+
+    // Write radiance to output buffer
+    ResolveSampleData(accumulatedSampleData, g_Global.samplesPerPixel, 1.0f);
+
     // Debug output calculation
     if (g_Global.debugOutputMode != 0)
     {
         float2 pixel = float2(DispatchRaysIndex().xy) + 0.5.xx;
-        RayDesc ray = GeneratePinholeCameraRay(pixel / float2(launchDimensions));
+        RayDesc ray = GeneratePinholeCameraRay(pixel / float2(launchDimensions), g_Lighting.view.matViewToWorld, g_Lighting.view.matViewToClip);
         RayPayload payload = (RayPayload)0;
         TraceRay(SceneBVH, 0, 0xFF, 0, 0, 0, ray, payload);
 
@@ -944,7 +905,6 @@ void PathTraceRays()
 
         u_Output[launchIndex] = float4(debugColor, 1.0f);
     }
-#endif // !SHARC_UPDATE && !NRC_UPDATE
 }
 
 [shader("raygeneration")]

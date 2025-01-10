@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
  *
  * NVIDIA CORPORATION and its licensors retain all intellectual property
  * and proprietary rights in and to this software, related documentation
@@ -21,9 +21,9 @@
 #include "PathtracerUi.h"
 
 // Unified Binding
-struct DescriptorSetIDs 
+struct DescriptorSetIDs
 {
-    enum 
+    enum
     {
         Globals,
         Denoiser,
@@ -34,16 +34,15 @@ struct DescriptorSetIDs
     };
 };
 
-#if ENABLE_DENOISER
+#if ENABLE_NRD
 #include "RenderTargets.h"
 #include "NrdIntegration.h"
-#endif // ENABLE_DENOISER
+#endif // ENABLE_NRD
 
 class ScopedMarker
 {
 public:
-    ScopedMarker(nvrhi::ICommandList* commandList, const char* name)
-        : m_commandList(commandList)
+    ScopedMarker(nvrhi::ICommandList* commandList, const char* name) : m_commandList(commandList)
     {
         m_commandList->beginMarker(name);
     }
@@ -51,6 +50,7 @@ public:
     {
         m_commandList->endMarker();
     }
+
 private:
     nvrhi::ICommandList* m_commandList;
 };
@@ -69,14 +69,14 @@ public:
 
     Pathtracer(donut::app::DeviceManager* deviceManager, UIData& ui, nvrhi::GraphicsAPI api);
     virtual ~Pathtracer();
-    
+
     bool Init(int argc, const char* const* argv);
 
     virtual bool LoadScene(std::shared_ptr<donut::vfs::IFileSystem> fs, const std::filesystem::path& sceneFileName) override;
     virtual void SceneUnloading() override;
     virtual void SceneLoaded() override;
     std::vector<std::string> const& GetAvailableScenes() const;
-    std::shared_ptr<donut::engine::Scene>   GetScene() const;
+    std::shared_ptr<donut::engine::Scene> GetScene() const;
 
     std::string GetCurrentSceneName() const;
     void SetPreferredSceneName(const std::string& sceneName);
@@ -192,45 +192,47 @@ private:
     nvrhi::GraphicsAPI m_api;
 
 #if ENABLE_NRC
-    std::unique_ptr<NrcIntegration>     m_nrc;
-    nrc::ContextSettings                m_nrcContextSettings;
-    nrc::BuffersAllocationInfo          m_nrcBuffersAllocation;
-    nvrhi::BindingLayoutHandle          m_nrcBindingLayout;
-    nvrhi::BindingSetHandle             m_nrcBindingSet;
+    std::unique_ptr<NrcIntegration> m_nrc;
+    nrc::ContextSettings m_nrcContextSettings;
+    int m_nrcUsedTrainingWidth = 0;
+    int m_nrcUsedTrainingHeight = 0;
+    nrc::BuffersAllocationInfo m_nrcBuffersAllocation;
+    nvrhi::BindingLayoutHandle m_nrcBindingLayout;
+    nvrhi::BindingSetHandle m_nrcBindingSet;
 #endif // ENABLE_NRC
 
 #if ENABLE_SHARC
-    static const uint32_t               m_sharcInvalidEntry = 0;
-    uint32_t                            m_sharcEntriesNum = 0;
-    nvrhi::BufferHandle                 m_sharcHashEntriesBuffer;
-    nvrhi::BufferHandle                 m_sharcCopyOffsetBuffer;
-    nvrhi::BufferHandle                 m_sharcVoxelDataBuffer;
-    nvrhi::BufferHandle                 m_sharcVoxelDataBufferPrev;
+    static const uint32_t m_sharcInvalidEntry = 0;
+    uint32_t m_sharcEntriesNum = 0;
+    nvrhi::BufferHandle m_sharcHashEntriesBuffer;
+    nvrhi::BufferHandle m_sharcCopyOffsetBuffer;
+    nvrhi::BufferHandle m_sharcVoxelDataBuffer;
+    nvrhi::BufferHandle m_sharcVoxelDataBufferPrev;
 
-    nvrhi::BindingLayoutHandle          m_sharcBindingLayout;
-    nvrhi::BindingSetHandle             m_sharcBindingSet;
-    nvrhi::BindingSetHandle             m_sharcBindingSetSwapped;
-    nvrhi::ShaderHandle                 m_sharcResolveCS;
-    nvrhi::ComputePipelineHandle        m_sharcResolvePSO;
-    nvrhi::ShaderHandle                 m_sharcHashCopyCS;
-    nvrhi::ComputePipelineHandle        m_sharcHashCopyPSO;
+    nvrhi::BindingLayoutHandle m_sharcBindingLayout;
+    nvrhi::BindingSetHandle m_sharcBindingSet;
+    nvrhi::BindingSetHandle m_sharcBindingSetSwapped;
+    nvrhi::ShaderHandle m_sharcResolveCS;
+    nvrhi::ComputePipelineHandle m_sharcResolvePSO;
+    nvrhi::ShaderHandle m_sharcHashCopyCS;
+    nvrhi::ComputePipelineHandle m_sharcHashCopyPSO;
 #endif // ENABLE_SHARC
 
-#if ENABLE_DENOISER
-    nvrhi::BindingLayoutHandle          m_denoiserBindingLayout;
-    nvrhi::BindingSetHandle             m_denoiserBindingSet;
-    nvrhi::BindingSetHandle             m_denoiserOutBindingSet;
-    nvrhi::ShaderHandle                 m_denoiserReblurPackCS;
-    nvrhi::ComputePipelineHandle        m_denoiserReblurPackPSO;
-    nvrhi::ShaderHandle                 m_denoiserReblurPack_NRC_CS;
-    nvrhi::ComputePipelineHandle        m_denoiserReblurPack_NRC_PSO;
-    nvrhi::ShaderHandle                 m_denoiserResolveCS;
-    nvrhi::ComputePipelineHandle        m_denoiserResolvePSO;
-    std::unique_ptr<RenderTargets>      m_renderTargets;
-    std::unique_ptr<NrdIntegration>     m_nrd;
-#endif // ENABLE_DENOISER
+#if ENABLE_NRD
+    nvrhi::BindingLayoutHandle m_denoiserBindingLayout;
+    nvrhi::BindingSetHandle m_denoiserBindingSet;
+    nvrhi::BindingSetHandle m_denoiserOutBindingSet;
+    nvrhi::ShaderHandle m_denoiserReblurPackCS;
+    nvrhi::ComputePipelineHandle m_denoiserReblurPackPSO;
+    nvrhi::ShaderHandle m_denoiserReblurPack_NRC_CS;
+    nvrhi::ComputePipelineHandle m_denoiserReblurPack_NRC_PSO;
+    nvrhi::ShaderHandle m_denoiserResolveCS;
+    nvrhi::ComputePipelineHandle m_denoiserResolvePSO;
+    std::unique_ptr<RenderTargets> m_renderTargets;
+    std::unique_ptr<NrdIntegration> m_nrd;
+#endif // ENABLE_NRD
 
     // Unified Binding
-    nvrhi::BindingLayoutHandle          m_dummyLayouts[DescriptorSetIDs::COUNT];
-    nvrhi::BindingSetHandle             m_dummyBindingSets[DescriptorSetIDs::COUNT];
+    nvrhi::BindingLayoutHandle m_dummyLayouts[DescriptorSetIDs::COUNT];
+    nvrhi::BindingSetHandle m_dummyBindingSets[DescriptorSetIDs::COUNT];
 };

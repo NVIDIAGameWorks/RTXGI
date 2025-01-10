@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2024, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
  *
  * NVIDIA CORPORATION and its licensors retain all intellectual property
  * and proprietary rights in and to this software, related documentation
@@ -19,7 +19,7 @@
 
 namespace NrcUtils
 {
-    void Validate(HRESULT hr, LPWSTR message);
+void Validate(HRESULT hr, LPWSTR message);
 
-    std::wstring StringToWstring(const std::string& wstr);
-}
+std::wstring StringToWstring(const std::string& wstr);
+} // namespace NrcUtils

@@ -1,66 +1,66 @@
 /*
-* Copyright (c) 2024, NVIDIA CORPORATION.  All rights reserved.
-*
-* NVIDIA CORPORATION and its licensors retain all intellectual property
-* and proprietary rights in and to this software, related documentation
-* and any modifications thereto.  Any use, reproduction, disclosure or
-* distribution of this software and related documentation without an express
-* license agreement from NVIDIA CORPORATION is strictly prohibited.
-*/
+ * Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * NVIDIA CORPORATION and its licensors retain all intellectual property
+ * and proprietary rights in and to this software, related documentation
+ * and any modifications thereto.  Any use, reproduction, disclosure or
+ * distribution of this software and related documentation without an express
+ * license agreement from NVIDIA CORPORATION is strictly prohibited.
+ */
 
 #include "NrdConfig.h"
 
 namespace NrdConfig
 {
-    nrd::RelaxSettings GetDefaultRELAXSettings()
-    {
-        nrd::RelaxSettings settings;
-        settings.enableAntiFirefly = true;
-        settings.hitDistanceReconstructionMode = nrd::HitDistanceReconstructionMode::AREA_3X3;
+nrd::RelaxSettings GetDefaultRELAXSettings()
+{
+    nrd::RelaxSettings settings;
+    settings.enableAntiFirefly = true;
+    settings.hitDistanceReconstructionMode = nrd::HitDistanceReconstructionMode::AREA_3X3;
 
-        settings.historyFixFrameNum = 4;
-        settings.spatialVarianceEstimationHistoryThreshold = 4;
+    settings.historyFixFrameNum = 4;
+    settings.spatialVarianceEstimationHistoryThreshold = 4;
 
-        //settings.enableReprojectionTestSkippingWithoutMotion = false;
+    // settings.enableReprojectionTestSkippingWithoutMotion = false;
 
-        // (pixels) - pre-accumulation spatial reuse pass blur radius (0 = disabled, must be used in case of probabilistic sampling) <- we're using probabilistic sampling
-        settings.diffusePrepassBlurRadius = 0.0f;
-        settings.specularPrepassBlurRadius = 20.0f;
+    // (pixels) - pre-accumulation spatial reuse pass blur radius (0 = disabled, must be used in case of probabilistic sampling) <- we're using probabilistic sampling
+    settings.diffusePrepassBlurRadius = 0.0f;
+    settings.specularPrepassBlurRadius = 20.0f;
 
-        // diffuse
-        settings.diffuseMaxFastAccumulatedFrameNum = 4;
-        settings.diffusePhiLuminance = 0.5f;
+    // diffuse
+    settings.diffuseMaxFastAccumulatedFrameNum = 4;
+    settings.diffusePhiLuminance = 0.5f;
 
-        // specular
-        settings.specularMaxFastAccumulatedFrameNum = 6;
-        settings.specularPhiLuminance = 0.35f;
-        settings.specularLobeAngleSlack = 0.15f;
+    // specular
+    settings.specularMaxFastAccumulatedFrameNum = 6;
+    settings.specularPhiLuminance = 0.35f;
+    settings.specularLobeAngleSlack = 0.15f;
 
-        settings.confidenceDrivenLuminanceEdgeStoppingRelaxation = 0.5f;
-        settings.roughnessEdgeStoppingRelaxation = 0.3f;
-        settings.specularLobeAngleFraction = 0.93f;
+    settings.confidenceDrivenLuminanceEdgeStoppingRelaxation = 0.5f;
+    settings.roughnessEdgeStoppingRelaxation = 0.3f;
+    settings.lobeAngleFraction = 0.93f;
 
-        settings.atrousIterationNum = 5;
+    settings.atrousIterationNum = 5;
 
-        settings.diffuseMaxAccumulatedFrameNum = 60;
-        settings.specularMaxAccumulatedFrameNum = 60;
+    settings.diffuseMaxAccumulatedFrameNum = 60;
+    settings.specularMaxAccumulatedFrameNum = 60;
 
-        settings.depthThreshold = 0.004f;
+    settings.depthThreshold = 0.004f;
 
-        return settings;
-    }
-
-    nrd::ReblurSettings GetDefaultREBLURSettings()
-    {
-        nrd::ReblurSettings settings;
-        settings.enableAntiFirefly = true;
-        settings.hitDistanceReconstructionMode = nrd::HitDistanceReconstructionMode::AREA_5X5;
-        settings.maxAccumulatedFrameNum = 60;
-
-        // (pixels) - pre-accumulation spatial reuse pass blur radius (0 = disabled, must be used in case of probabilistic sampling) <- we're using probabilistic sampling
-        // settings.diffusePrepassBlurRadius = 0.0f;
-        // settings.specularPrepassBlurRadius = 0.0f;
-
-        return settings;
-    }
+    return settings;
 }
+
+nrd::ReblurSettings GetDefaultREBLURSettings()
+{
+    nrd::ReblurSettings settings;
+    settings.enableAntiFirefly = true;
+    settings.hitDistanceReconstructionMode = nrd::HitDistanceReconstructionMode::AREA_5X5;
+    settings.maxAccumulatedFrameNum = 60;
+
+    // (pixels) - pre-accumulation spatial reuse pass blur radius (0 = disabled, must be used in case of probabilistic sampling) <- we're using probabilistic sampling
+    // settings.diffusePrepassBlurRadius = 0.0f;
+    // settings.specularPrepassBlurRadius = 0.0f;
+
+    return settings;
+}
+} // namespace NrdConfig

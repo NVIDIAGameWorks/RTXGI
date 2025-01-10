@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2024, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2023-2025, NVIDIA CORPORATION.  All rights reserved.
 #
 # NVIDIA CORPORATION and its licensors retain all intellectual property
 # and proprietary rights in and to this software, related documentation
@@ -33,7 +33,7 @@ set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
 
 # Helper to download and unzip a package from a URL
 # Uses a zero-length file to identify the version of the package
-function(CheckAndDownloadPackage NAME VERSION LOCAL_PATH URL)
+function(CheckAndDownloadPackage NAME VERSION LOCAL_PATH URL ARCHIVE_TYPE)
     # Do we already have the correct version?
     if(NOT EXISTS ${LOCAL_PATH}/${VERSION}.ver)
         # Was there a previous version that we need to delete?
@@ -42,17 +42,17 @@ function(CheckAndDownloadPackage NAME VERSION LOCAL_PATH URL)
             file(REMOVE_RECURSE ${LOCAL_PATH})
         endif()
         message(STATUS "Obtaining " ${NAME} " " ${VERSION})
-        file(DOWNLOAD ${URL} ${LOCAL_PATH}.zip)
+        file(DOWNLOAD ${URL} ${LOCAL_PATH}.${ARCHIVE_TYPE})
         message(STATUS "Extracting " ${NAME})
-        file(ARCHIVE_EXTRACT INPUT ${LOCAL_PATH}.zip DESTINATION ${LOCAL_PATH})
-        file(REMOVE ${LOCAL_PATH}.zip)
+        file(ARCHIVE_EXTRACT INPUT ${LOCAL_PATH}.${ARCHIVE_TYPE} DESTINATION ${LOCAL_PATH})
+        file(REMOVE ${LOCAL_PATH}.${ARCHIVE_TYPE})
         # Create an empty file so we know which version we have
         file(WRITE ${LOCAL_PATH}/${VERSION}.ver)
     endif()
 endfunction()
 
-CheckAndDownloadPackage("Agility SDK" "v1.610.4" ${CMAKE_CURRENT_SOURCE_DIR}/external/AgilitySDK https://www.nuget.org/api/v2/package/Microsoft.Direct3D.D3D12/1.610.4)
-CheckAndDownloadPackage("DXC" "v1.7.2308" ${CMAKE_CURRENT_SOURCE_DIR}/external/dxc https://github.com/microsoft/DirectXShaderCompiler/releases/download/v1.7.2308/dxc_2023_08_14.zip)
+CheckAndDownloadPackage("Agility SDK" "v1.610.4" ${CMAKE_CURRENT_SOURCE_DIR}/external/AgilitySDK https://www.nuget.org/api/v2/package/Microsoft.Direct3D.D3D12/1.610.4 "zip")
+CheckAndDownloadPackage("DXC" "v1.7.2308" ${CMAKE_CURRENT_SOURCE_DIR}/external/dxc https://github.com/microsoft/DirectXShaderCompiler/releases/download/v1.7.2308/dxc_2023_08_14.zip "zip")
 
 # -----------------------------------------------------------------------------
 # Configure options
@@ -107,7 +107,7 @@ unset(NVRHI_WITH_VULKAN CACHE)
 option(DONUT_WITH_VULKAN "Enable the Vulkan version of Donut" ON)
 
 # Add projects
-add_subdirectory(donut)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/donut)
 
 message(STATUS "NVRHI Vulkan support " "${NVRHI_WITH_VULKAN}")
 message(STATUS "Donut Vulkan support " "${DONUT_WITH_VULKAN}")
