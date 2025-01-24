@@ -1,5 +1,12 @@
 # RTXGI SDK Change Log
 
+## 2.3.1
+NRC
+- Update to version 0.13.3.0.
+- Internal CUDA SDK fix.
+- Minor documentation additions for NRC settings.
+
+
 ## 2.3.0
 
 ### RTXGI
