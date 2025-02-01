@@ -1,5 +1,5 @@
 # RTXGI
-![banner](docs/figures/banner.png)
+![banner](Docs/figures/banner.png)
 <br />
 <div align="center">
     · 
