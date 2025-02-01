@@ -5,5 +5,5 @@ build*/
 *.sublime-project
 *.sublime-workspace
 nrd.cfg
-external/AgilitySDK/
-external/dxc/
+External/AgilitySDK/
+External/dxc/

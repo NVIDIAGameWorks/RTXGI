@@ -147,13 +147,13 @@ bool Pathtracer::Init(int argc, const char* const* argv)
     m_ui.enableAnimations = m_enableAnimations;
 
     m_nativeFileSystem = std::make_shared<vfs::NativeFileSystem>();
-    std::filesystem::path sceneFileName = app::GetDirectoryWithExecutable().parent_path() / "media/bistro.scene.json";
-    std::filesystem::path mediaPath = app::GetDirectoryWithExecutable().parent_path() / "media";
+    std::filesystem::path sceneFileName = app::GetDirectoryWithExecutable().parent_path() / "Assets/Media/Bistro.scene.json";
+    std::filesystem::path mediaPath = app::GetDirectoryWithExecutable().parent_path() / "Assets/Media";
     std::filesystem::path frameworkShaderPath = app::GetDirectoryWithExecutable() / "shaders/framework" / app::GetShaderTypeName(GetDevice()->getGraphicsAPI());
     std::filesystem::path appShaderPath = app::GetDirectoryWithExecutable() / "shaders/pathtracer" / app::GetShaderTypeName(GetDevice()->getGraphicsAPI());
 
     m_rootFileSystem = std::make_shared<vfs::RootFileSystem>();
-    m_rootFileSystem->mount("/media", mediaPath);
+    m_rootFileSystem->mount("/Assets/Media", mediaPath);
     m_rootFileSystem->mount("/shaders/donut", frameworkShaderPath);
     m_rootFileSystem->mount("/shaders/app", appShaderPath);
     m_rootFileSystem->mount("/native", m_nativeFileSystem);
@@ -162,7 +162,7 @@ bool Pathtracer::Init(int argc, const char* const* argv)
     const std::string mediaExt = ".scene.json";
     if (sceneName)
     {
-        sceneFileName = app::GetDirectoryWithExecutable().parent_path() / "media/";
+        sceneFileName = app::GetDirectoryWithExecutable().parent_path() / "Assets/Media/";
         sceneFileName += sceneName;
 
         if (!strstr(sceneName, mediaExt.c_str()))
@@ -175,7 +175,7 @@ bool Pathtracer::Init(int argc, const char* const* argv)
 #endif // ENABLE_NRD
 
     // Get all scenes in "media" folder
-    for (const auto& file : std::filesystem::directory_iterator(GetLocalPath("media")))
+    for (const auto& file : std::filesystem::directory_iterator(GetLocalPath("Assets/Media")))
     {
         if (!file.is_regular_file())
             continue;
@@ -337,11 +337,11 @@ bool Pathtracer::Init(int argc, const char* const* argv)
             else
                 pipelineDesc.bindingLayouts = { m_globalBindingLayout, m_dummyLayouts[1], m_dummyLayouts[2], m_sharcBindingLayout };
 
-            m_sharcResolveCS = m_shaderFactory->CreateShader("app/sharcResolve.hlsl", "sharcResolve", nullptr, nvrhi::ShaderType::Compute);
+            m_sharcResolveCS = m_shaderFactory->CreateShader("app/SharcResolve.hlsl", "sharcResolve", nullptr, nvrhi::ShaderType::Compute);
             pipelineDesc.CS = m_sharcResolveCS;
             m_sharcResolvePSO = GetDevice()->createComputePipeline(pipelineDesc);
 
-            m_sharcHashCopyCS = m_shaderFactory->CreateShader("app/sharcResolve.hlsl", "sharcCompaction", nullptr, nvrhi::ShaderType::Compute);
+            m_sharcHashCopyCS = m_shaderFactory->CreateShader("app/SharcResolve.hlsl", "sharcCompaction", nullptr, nvrhi::ShaderType::Compute);
             pipelineDesc.CS = m_sharcHashCopyCS;
             m_sharcHashCopyPSO = GetDevice()->createComputePipeline(pipelineDesc);
         }
@@ -352,7 +352,7 @@ bool Pathtracer::Init(int argc, const char* const* argv)
     std::vector<ShaderMacro> denoiseMacros = { ShaderMacro("NRD_NORMAL_ENCODING", "2"), ShaderMacro("NRD_ROUGHNESS_ENCODING", "1") };
 
     {
-        m_denoiserReblurPackCS = m_shaderFactory->CreateShader("app/denoiser.hlsl", "reblurPackData", &denoiseMacros, nvrhi::ShaderType::Compute);
+        m_denoiserReblurPackCS = m_shaderFactory->CreateShader("app/Denoiser.hlsl", "reblurPackData", &denoiseMacros, nvrhi::ShaderType::Compute);
         nvrhi::ComputePipelineDesc pipelineDesc;
         pipelineDesc.bindingLayouts = { m_globalBindingLayout, m_denoiserBindingLayout };
         pipelineDesc.CS = m_denoiserReblurPackCS;
@@ -364,7 +364,7 @@ bool Pathtracer::Init(int argc, const char* const* argv)
         std::vector<ShaderMacro> denoiseMacrosNRC = denoiseMacros;
         denoiseMacrosNRC.push_back((ShaderMacro("ENABLE_NRC", "1")));
 
-        m_denoiserReblurPack_NRC_CS = m_shaderFactory->CreateShader("app/denoiser.hlsl", "reblurPackData", &denoiseMacrosNRC, nvrhi::ShaderType::Compute);
+        m_denoiserReblurPack_NRC_CS = m_shaderFactory->CreateShader("app/Denoiser.hlsl", "reblurPackData", &denoiseMacrosNRC, nvrhi::ShaderType::Compute);
         nvrhi::ComputePipelineDesc pipelineDesc;
         pipelineDesc.bindingLayouts = { m_globalBindingLayout, m_denoiserBindingLayout };
         pipelineDesc.CS = m_denoiserReblurPack_NRC_CS;
@@ -373,7 +373,7 @@ bool Pathtracer::Init(int argc, const char* const* argv)
 #endif // ENABLE_NRC
 
     {
-        m_denoiserResolveCS = m_shaderFactory->CreateShader("app/denoiser.hlsl", "resolve", &denoiseMacros, nvrhi::ShaderType::Compute);
+        m_denoiserResolveCS = m_shaderFactory->CreateShader("app/Denoiser.hlsl", "resolve", &denoiseMacros, nvrhi::ShaderType::Compute);
         nvrhi::ComputePipelineDesc pipelineDesc;
         pipelineDesc.bindingLayouts = { m_globalBindingLayout, m_denoiserBindingLayout };
         pipelineDesc.CS = m_denoiserResolveCS;
@@ -393,7 +393,7 @@ bool Pathtracer::Init(int argc, const char* const* argv)
 
         m_tonemappingBindingLayout = GetDevice()->createBindingLayout(bindingLayoutDesc);
 
-        m_tonemappingPS = m_shaderFactory->CreateShader("app/tonemapping.hlsl", "main_ps", nullptr, nvrhi::ShaderType::Pixel);
+        m_tonemappingPS = m_shaderFactory->CreateShader("app/Tonemapping.hlsl", "main_ps", nullptr, nvrhi::ShaderType::Pixel);
     }
 
     m_commandList = GetDevice()->createCommandList();
@@ -643,7 +643,7 @@ void Pathtracer::Animate(float fElapsedTimeSeconds)
 
 bool Pathtracer::CreateRayTracingPipeline(engine::ShaderFactory& shaderFactory, PipelinePermutation& pipelinePermutation, std::vector<engine::ShaderMacro>& pipelineMacros)
 {
-    nvrhi::ShaderLibraryHandle shaderLibrary = shaderFactory.CreateShaderLibrary("app/pathtracer.hlsl", &pipelineMacros);
+    nvrhi::ShaderLibraryHandle shaderLibrary = shaderFactory.CreateShaderLibrary("app/Pathtracer.hlsl", &pipelineMacros);
     if (!shaderLibrary)
         return false;
 

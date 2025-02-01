@@ -46,7 +46,8 @@ PathtracerUI::PathtracerUI(DeviceManager* deviceManager, Pathtracer& app, UIData
 {
     m_commandList = GetDevice()->createCommandList();
 
-    m_fontDroidMono = this->LoadFont(*(app.GetRootFS()), "/media/fonts/DroidSans/DroidSans-Mono.ttf", 16.0f);
+    std::shared_ptr<donut::vfs::NativeFileSystem> nativeFS = std::make_shared<donut::vfs::NativeFileSystem>();
+    m_fontDroidMono = this->LoadFont(*nativeFS, GetDirectoryWithExecutable().parent_path() / "Assets" / "Media/Fonts/DroidSans/DroidSans-Mono.ttf", 16.0f);
 
     ImGui_Console::Options options;
     options.font = m_fontDroidMono;

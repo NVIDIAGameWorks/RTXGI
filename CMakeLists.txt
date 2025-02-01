@@ -9,7 +9,7 @@
 cmake_minimum_required (VERSION 3.19)
 
 project(
-    rtxgi2_samples
+    RTXGI2Samples
     DESCRIPTION "Samples showcasing NRC and SHARC features"
     LANGUAGES CXX
 )
@@ -65,12 +65,12 @@ set(DXC_SPIRV_PATH "${CMAKE_CURRENT_SOURCE_DIR}/external/dxc/bin/x64/dxc.exe")
 
 # Setup denoiser support (NRD)
 option(USE_RAY_TRACING_DENOISER "Include NRD as part of the sample." ON)
-set(NRD_PATH "${CMAKE_CURRENT_SOURCE_DIR}/external/RayTracingDenoiser")
+set(NRD_PATH "${CMAKE_CURRENT_SOURCE_DIR}/External/RayTracingDenoiser")
 
 # Setup asset importer support
 option(DONUT_WITH_ASSIMP "" OFF)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/Bin")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
@@ -90,13 +90,13 @@ endif()
 # Check if the custom directory path is provided.
 if(NOT CUSTOM_NRC_DISTRO_PATH)
     message(STATUS "Custom NRC distro path is not provided.")
-    set(NRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sdk-libraries/nrc)
+    set(NRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Libraries/Nrc)
 else()
     set(NRC_DIR ${CUSTOM_NRC_DISTRO_PATH})  
 endif()
 
-if(EXISTS ${NRC_DIR}/bin/NRC_Vulkan.dll)
-    set(SETUP_NRC_WITH_VULKAN TRUE) #TODO: maybe not required...
+if(EXISTS ${NRC_DIR}/Bin/NRC_Vulkan.dll)
+    set(SETUP_NRC_WITH_VULKAN TRUE)
     add_compile_definitions(NRC_WITH_VULKAN)   
 endif()
 
@@ -107,20 +107,20 @@ unset(NVRHI_WITH_VULKAN CACHE)
 option(DONUT_WITH_VULKAN "Enable the Vulkan version of Donut" ON)
 
 # Add projects
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/donut)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/External/Donut)
 
 message(STATUS "NVRHI Vulkan support " "${NVRHI_WITH_VULKAN}")
 message(STATUS "Donut Vulkan support " "${DONUT_WITH_VULKAN}")
 
 if(NVRHI_WITH_VULKAN OR NVRHI_WITH_DX12)
-    add_subdirectory(samples/pathtracer)
+    add_subdirectory(Samples/Pathtracer)
     # Set Pathtracer sample project as a startup project
-	set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT pathtracer)
+	set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Pathtracer)
 endif()
 
 
 # Add SHARC includes to the solution
-set(SHARC_LIBRARY_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/sdk-libraries/sharc")
+set(SHARC_LIBRARY_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/Libraries/Sharc")
 file(GLOB_RECURSE INCLUDE_SHARC "${SHARC_LIBRARY_ROOT}/*.h")
 
 # Add NRC includes to the solution
@@ -129,13 +129,13 @@ file(GLOB_RECURSE INCLUDE_NRC
     "${NRC_DIR}/include/*.h"
 )
 
-add_library(sdk-libraries ${INCLUDE_SHARC} ${INCLUDE_NRC})
-set_target_properties(sdk-libraries PROPERTIES LINKER_LANGUAGE CXX)
-set(VS_FOLDER_NAME "sdk-libraries")
-set_target_properties(sdk-libraries PROPERTIES FOLDER ${VS_FOLDER_NAME})
+add_library(libraries ${INCLUDE_SHARC} ${INCLUDE_NRC})
+set_target_properties(libraries PROPERTIES LINKER_LANGUAGE CXX)
+set(VS_FOLDER_NAME "Libraries")
+set_target_properties(libraries PROPERTIES FOLDER ${VS_FOLDER_NAME})
 
-source_group("sharc" FILES ${INCLUDE_SHARC})
-source_group("nrc"   FILES ${INCLUDE_NRC})
+source_group("Sharc" FILES ${INCLUDE_SHARC})
+source_group("Nrc"   FILES ${INCLUDE_NRC})
 
 # Include external
-add_subdirectory(external)
+add_subdirectory(External)

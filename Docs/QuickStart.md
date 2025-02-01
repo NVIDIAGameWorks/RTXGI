@@ -35,4 +35,4 @@ This showcases an elementary path tracer that relies on either NRC or SHaRC to t
 
 [NrcGuide]: NrcGuide.md
 [SharcGuide]: SharcGuide.md
-[Prereq]: ../README.md/#prerequisites
+[Prereq]: ../Readme.md/#prerequisites

@@ -3,13 +3,13 @@
 <br />
 <div align="center">
     · 
-    <a href="CHANGELOG.md">Change Log</a>
+    <a href="Changelog.md">Change Log</a>
     ·
-    <a href="docs/QuickStart.md">Quick Start</a>
+    <a href="Docs/QuickStart.md">Quick Start</a>
     ·
-    <a href="docs/NrcGuide.md">NRC Guide</a>
+    <a href="Docs/NrcGuide.md">NRC Guide</a>
     ·
-    <a href="docs/SharcGuide.md">SHaRC Guide</a>
+    <a href="Docs/SharcGuide.md">SHaRC Guide</a>
     ·
 </div>
 <br/>
@@ -24,11 +24,11 @@ RTXGI SDK provides an example integration (DX12 and Vulkan) of two state-of-the-
 ## Project structure
 |Directory                   |Details                                      |
 |----------------------------|---------------------------------------------|
-|[/docs][docs]               |_Documentation for showcased tech_           |
-|[/external][external]       |_Helper dependencies for the samples_        |
-|[/media][media]             |_Assets and scene definitions_               |
-|[/samples][samples]         |_Samples showcasing usage of NRC, SHaRC_     |
-|[/sdk-libraries][libraries] |_Binaries, src, includes for NRC, SHaRC_     |
+|[/Docs][Docs]               |_Documentation for showcased tech_           |
+|[/External][External]       |_Helper dependencies for the samples_        |
+|[/Assets][Assets]           |_Assets and scene definitions_               |
+|[/Samples][Samples]         |_Samples showcasing usage of NRC, SHaRC_     |
+|[/Libraries][Libraries]     |_Binaries, src, includes for NRC, SHaRC_     |
 
 
 ## Getting up and running
@@ -39,7 +39,7 @@ Any DXR GPU for SHaRC **|** NV GPUs ≥ Turing (arch 70) for NRC **|** [CMake v3
 ### Further steps
 - [Quick start guide][QuickStart] for building and running the pathtracer example.
 - [NRC integration guide][NrcGuide] and the [SHaRC integration guide][SharcGuide] respectively.
-- [Change log][ChangeLog] for release information.
+- [Changelog][ChangeLog] for release information.
 
 ## Contact
 RTXGI SDK is actively being developed. Please report any issues directly through the GitHub issue tracker, and for any information or suggestions contact us at rtxgi-sdk-support@nvidia.com.
@@ -60,19 +60,19 @@ Use the following BibTex entry to cite the usage of RTXGI in published research:
 See [LICENSE.md](LICENSE.md)
 
 ## RTXGI v1.x
-Version v1.x of RTXGI which includes the DDGI algorithm is located in a separate repo at the following url: https://github.com/NVIDIAGameWorks/RTXGI-DDGI.
+Version v1.x of RTXGI which includes the DDGI algorithm is located at https://github.com/NVIDIAGameWorks/RTXGI-DDGI.
 
 
-[ChangeLog]: CHANGELOG.md
-[QuickStart]: docs/QuickStart.md
-[SharcGuide]: docs/SharcGuide.md
-[NrcGuide]: docs/NrcGuide.md
+[ChangeLog]: Changelog.md
+[QuickStart]: Docs/QuickStart.md
+[SharcGuide]: Docs/SharcGuide.md
+[NrcGuide]: Docs/NrcGuide.md
 [ProjectStructure]: #project-structure
-[docs]: docs
-[external]: external
-[media]: media
-[samples]: samples/pathtracer
-[libraries]: sdk-libraries
+[Docs]: Docs
+[External]: External
+[Assets]: Assets
+[Samples]: Samples/Pathtracer
+[Libraries]: Libraries
 [CMake]: https://cmake.org/download/
 [LFS]: https://git-lfs.com/
 [VKSDK]: https://vulkan.lunarg.com/sdk/home#windows
