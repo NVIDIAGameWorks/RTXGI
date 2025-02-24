@@ -146,8 +146,11 @@ bool Pathtracer::Init(int argc, const char* const* argv)
     m_accumulatedFrameCount = 0;
     m_ui.enableAnimations = m_enableAnimations;
 
+    const std::string mediaExt = ".scene.json";
+    const std::string glbExt = ".glb";
+    const std::string gltfExt = ".gltf";
     m_nativeFileSystem = std::make_shared<vfs::NativeFileSystem>();
-    std::filesystem::path sceneFileName = app::GetDirectoryWithExecutable().parent_path() / "Assets/Media/Bistro.scene.json";
+    std::filesystem::path sceneFileName = app::GetDirectoryWithExecutable().parent_path() / ("Assets/Media/Bistro" + mediaExt);
     std::filesystem::path mediaPath = app::GetDirectoryWithExecutable().parent_path() / "Assets/Media";
     std::filesystem::path frameworkShaderPath = app::GetDirectoryWithExecutable() / "shaders/framework" / app::GetShaderTypeName(GetDevice()->getGraphicsAPI());
     std::filesystem::path appShaderPath = app::GetDirectoryWithExecutable() / "shaders/pathtracer" / app::GetShaderTypeName(GetDevice()->getGraphicsAPI());
@@ -159,14 +162,21 @@ bool Pathtracer::Init(int argc, const char* const* argv)
     m_rootFileSystem->mount("/native", m_nativeFileSystem);
 
     // Override default scene
-    const std::string mediaExt = ".scene.json";
     if (sceneName)
     {
-        sceneFileName = app::GetDirectoryWithExecutable().parent_path() / "Assets/Media/";
-        sceneFileName += sceneName;
+        if(m_nativeFileSystem->fileExists(sceneName))
+        {
+            sceneFileName = std::filesystem::path("/native") / sceneName;
+            m_sceneFilesAvailable.push_back(std::string(sceneName));
+        }
+        else
+        {
+            sceneFileName = app::GetDirectoryWithExecutable().parent_path() / "media/";
+            sceneFileName += sceneName;
+        }
 
-        if (!strstr(sceneName, mediaExt.c_str()))
-            sceneFileName += ".scene.json";
+        if (!strstr(sceneName, mediaExt.c_str()) && !strstr(sceneName, glbExt.c_str()) && !strstr(sceneName, gltfExt.c_str()))
+            sceneFileName += mediaExt;
     }
 
 #if ENABLE_NRD
